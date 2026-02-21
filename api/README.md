@@ -22,4 +22,4 @@ vercel dev
 
 ## Модель
 
-Используется **bxclib2/flux_img2img** на Replicate (img2img по референсному фото и промпту).
+Используются **Google Nano Banana** и **OpenAI GPT Image 1.5** на Replicate (img2img по референсному фото и промпту).
