@@ -483,6 +483,53 @@
     .gen-howto li { margin-bottom: 0.5rem; }
     .gen-howto a { color: var(--accent); }
     .gen-howto code { background: var(--bg-input); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85em; }
+
+    .gen-variants-picker { margin-bottom: 1.5rem; }
+    .gen-variants-picker summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+    .gen-variants-load { margin: 0.5rem 0; }
+    .gen-variants-grid {
+      display: flex;
+      gap: 0.75rem;
+      overflow-x: auto;
+      padding: 0.5rem 0;
+      margin-top: 0.5rem;
+    }
+    .gen-variants-grid .gen-variant-thumb {
+      flex-shrink: 0;
+      width: 80px;
+      height: 100px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid var(--bg-input);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .gen-variants-grid .gen-variant-thumb:hover,
+    .gen-variants-grid .gen-variant-thumb.selected { border-color: var(--accent); }
+    .gen-variants-grid .gen-variant-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .btn-secondary {
+      padding: 0.5rem 1rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      background: var(--bg-input);
+      border: 2px solid var(--bg-card);
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--accent); background: var(--bg-card); }
+
+    .gen-analyze-section { margin-bottom: 1.5rem; }
+    .gen-analyze-section .gen-analyze-btn { margin-bottom: 0.75rem; }
+    .gen-analyze-result { margin-top: 0.5rem; }
+    .gen-analyze-result textarea { background: var(--bg-input); border: 2px solid var(--bg-card); }
+    .gen-analyze-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
   </style>
 </head>
 <body>
@@ -566,6 +613,14 @@
         <label>URL прокси:</label>
         <input type="url" id="genProxyUrl" class="gen-proxy-input" placeholder="https://ваш-проект.vercel.app или .../api/generate" autocomplete="off">
       </div>
+      <details class="gen-variants-picker">
+        <summary>Выбрать фото из вариантов</summary>
+        <div class="gen-variants-load">
+          <input type="file" id="genVariantsFileInput" accept=".json" style="display:none">
+          <button type="button" class="btn-secondary" id="genVariantsLoadBtn">Загрузить JSON вариантов</button>
+        </div>
+        <div id="genVariantsGrid" class="gen-variants-grid"></div>
+      </details>
       <div class="gen-images-row">
         <div class="gen-image-slot">
           <label>Исходное фото:</label>
@@ -645,6 +700,17 @@
               Размер как у исходника
             </label>
             <span class="gen-setting-hint">Высота и ширина результата будут соответствовать исходному фото (Flux, SDXL)</span>
+          </div>
+        </div>
+      </div>
+      <div class="gen-section gen-analyze-section">
+        <label>Промпт из GPT (анализ фото):</label>
+        <button type="button" class="btn-secondary gen-analyze-btn" id="genAnalyzeBtn" disabled>Анализировать через GPT</button>
+        <div class="gen-analyze-result" id="genAnalyzeResult" style="display:none;">
+          <textarea id="genAnalyzedPrompt" class="gen-prompt-input" readonly rows="4" placeholder="Промпт появится после анализа"></textarea>
+          <div class="gen-analyze-actions">
+            <button type="button" class="btn-secondary" id="genAnalyzeCopy">Копировать</button>
+            <button type="button" class="btn-secondary" id="genAnalyzeInsert">Вставить в промпт</button>
           </div>
         </div>
       </div>
@@ -744,12 +810,33 @@
           const data = JSON.parse(reader.result);
           variantsItems = Array.isArray(data) ? data : (data.items || data.data || []);
           renderVariants(getSortedVariants());
+          renderGenVariants(getSortedVariants());
         } catch (err) {
           alert('Ошибка чтения JSON: ' + err.message);
         }
       };
       reader.readAsText(file, 'UTF-8');
     }
+
+    const genVariantsGrid = document.getElementById('genVariantsGrid');
+    const genVariantsFileInput = document.getElementById('genVariantsFileInput');
+    const genVariantsLoadBtn = document.getElementById('genVariantsLoadBtn');
+
+    function renderGenVariants(items) {
+      if (!genVariantsGrid) return;
+      genVariantsGrid.innerHTML = items.map((item, idx) => {
+        const path = item.photo_path ?? item.photo ?? item.image ?? item.url ?? '';
+        const src = path ? (path.startsWith('http') ? path : VARIANTS_BASE_URL + path) : '';
+        return src ? `<div class="gen-variant-thumb" data-idx="${idx}" data-src="${src}" title="Выбрать"><img src="${src}" alt="" loading="lazy" onerror="this.parentElement.remove()"></div>` : '';
+      }).join('');
+    }
+
+    genVariantsLoadBtn?.addEventListener('click', () => genVariantsFileInput?.click());
+    genVariantsFileInput?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) handleVariantsFile(file);
+      e.target.value = '';
+    });
 
     variantsSort?.addEventListener('change', () => {
       if (variantsItems.length) renderVariants(getSortedVariants());
@@ -837,6 +924,11 @@
     const genResultWrap = document.getElementById('genResultWrap');
     const genResult = document.getElementById('genResult');
     const genResultPlaceholder = document.getElementById('genResultPlaceholder');
+    const genAnalyzeBtn = document.getElementById('genAnalyzeBtn');
+    const genAnalyzedPrompt = document.getElementById('genAnalyzedPrompt');
+    const genAnalyzeResult = document.getElementById('genAnalyzeResult');
+    const genAnalyzeCopy = document.getElementById('genAnalyzeCopy');
+    const genAnalyzeInsert = document.getElementById('genAnalyzeInsert');
 
     let genImageDataUrl = null;
     let genSourceWidth = 0, genSourceHeight = 0;
@@ -887,9 +979,58 @@
     function updateGenBtn() {
       const hasProxy = (genProxyUrl?.value || '').trim().length > 0;
       genBtn.disabled = !hasProxy || !genImageDataUrl || !(genPrompt?.value || '').trim();
+      if (genAnalyzeBtn) genAnalyzeBtn.disabled = !genImageDataUrl;
     }
     genProxyUrl?.addEventListener('input', updateGenBtn);
     genPrompt?.addEventListener('input', updateGenBtn);
+
+    genVariantsGrid?.addEventListener('click', async (e) => {
+      const thumb = e.target.closest('.gen-variant-thumb');
+      if (!thumb || !thumb.dataset.src) return;
+      const imageUrl = thumb.dataset.src.trim();
+      genPreview.src = imageUrl;
+      genPreview.style.display = 'block';
+      genUploadPlaceholder.style.display = 'none';
+      genUpload.classList.add('has-image');
+      genVariantsGrid?.querySelectorAll('.gen-variant-thumb.selected').forEach(el => el.classList.remove('selected'));
+      thumb.classList.add('selected');
+      try {
+        if (imageUrl.startsWith('data:')) {
+          const r = await compressImageForReplicate(imageUrl, 99999);
+          genImageDataUrl = r.dataUrl;
+          genSourceWidth = r.width;
+          genSourceHeight = r.height;
+        } else {
+          let blob;
+          try {
+            const res = await fetch(imageUrl, { mode: 'cors' });
+            if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+            blob = await res.blob();
+          } catch (directErr) {
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(imageUrl);
+            const res = await fetch(proxyUrl, { mode: 'cors' });
+            if (!res.ok) throw new Error('CORS: ' + res.status);
+            blob = await res.blob();
+          }
+          const reader = new FileReader();
+          const rawDataUrl = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          const r = await compressImageForReplicate(rawDataUrl);
+          genImageDataUrl = r.dataUrl;
+          genSourceWidth = r.width;
+          genSourceHeight = r.height;
+        }
+      } catch (err) {
+        alert('Не удалось загрузить фото: ' + (err.message || err));
+        genImageDataUrl = null;
+        genSourceWidth = 0;
+        genSourceHeight = 0;
+      }
+      updateGenBtn();
+    });
 
     genBtn?.addEventListener('click', async () => {
       let base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
@@ -964,6 +1105,48 @@
       }
       genBtn.disabled = false;
       updateGenBtn();
+    });
+
+    genAnalyzeBtn?.addEventListener('click', async () => {
+      if (!genImageDataUrl) return;
+      let base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
+      if (!base) { alert('Укажите URL прокси в поле выше'); genAnalyzeBtn.disabled = false; genAnalyzeBtn.textContent = 'Анализировать через GPT'; return; }
+      if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
+      const analyzeUrl = base.replace(/\/api\/generate\/?$/, '').replace(/\/api\/?$/, '') + '/api/analyze';
+      genAnalyzeBtn.disabled = true;
+      genAnalyzeBtn.textContent = 'Анализ...';
+      genAnalyzeResult.style.display = 'none';
+      try {
+        const res = await fetch(analyzeUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: genImageDataUrl }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText || 'Ошибка анализа');
+        const prompt = data.prompt || '';
+        genAnalyzedPrompt.value = prompt;
+        genAnalyzeResult.style.display = 'block';
+      } catch (err) {
+        alert('Ошибка GPT: ' + (err.message || err));
+      }
+      genAnalyzeBtn.disabled = false;
+      genAnalyzeBtn.textContent = 'Анализировать через GPT';
+    });
+
+    genAnalyzeCopy?.addEventListener('click', async () => {
+      const text = genAnalyzedPrompt?.value || '';
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (_) {
+        genAnalyzedPrompt?.select();
+        document.execCommand('copy');
+      }
+    });
+
+    genAnalyzeInsert?.addEventListener('click', () => {
+      if (genAnalyzedPrompt?.value && genPrompt) genPrompt.value = genAnalyzedPrompt.value;
     });
 
     function renderVariants(items) {
