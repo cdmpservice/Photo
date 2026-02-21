@@ -419,6 +419,11 @@
     .gen-result-wrap { margin-top: 1rem; text-align: center; }
     .gen-result-wrap img { max-width: 100%; border-radius: 12px; border: 2px solid var(--bg-input); }
     .gen-btn { margin-top: 1rem; }
+    .gen-settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+    .gen-setting-wide { grid-column: 1 / -1; }
+    .gen-setting label { display: block; font-size: 0.85rem; margin-bottom: 0.35rem; }
+    .gen-setting-input { width: 100%; padding: 0.5rem 0.75rem; font-family: inherit; font-size: 0.9rem; background: var(--bg-input); border: 2px solid var(--bg-card); border-radius: 8px; color: var(--text); }
+    .gen-setting-hint { display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
 
     .gen-howto {
       background: var(--bg-card);
@@ -536,7 +541,53 @@
         <select id="genModel" class="gen-proxy-input">
           <option value="flux_img2img">Flux img2img</option>
           <option value="sdxl">SDXL img2img</option>
+          <option value="nano_banana">Google Nano Banana</option>
+          <option value="gpt_image_1_5">OpenAI GPT Image 1.5</option>
         </select>
+      </div>
+      <div class="gen-section gen-settings">
+        <label>Настройки модели:</label>
+        <div class="gen-settings-grid">
+          <div class="gen-setting">
+            <label for="genPromptStrength" title="Насколько сильно промпт изменяет исходное фото. 0.1 = почти не меняет, 1 = полная перерисовка.">Сила промпта (0.1–1):</label>
+            <input type="number" id="genPromptStrength" min="0.1" max="1" step="0.1" value="0.8" class="gen-setting-input">
+            <span class="gen-setting-hint">Степень изменения исходного фото промптом. 1 = полная перерисовка</span>
+          </div>
+          <div class="gen-setting">
+            <label for="genSteps" title="Чем больше шагов — тем качественнее, но дольше.">Шаги вывода:</label>
+            <input type="number" id="genSteps" min="10" max="50" value="28" class="gen-setting-input">
+            <span class="gen-setting-hint">Шаги денойзинга. Больше = качественнее, но медленнее</span>
+          </div>
+          <div class="gen-setting">
+            <label for="genSeed" title="Для воспроизводимых результатов. Пусто = случайный результат.">Seed:</label>
+            <input type="number" id="genSeed" placeholder="—" class="gen-setting-input" min="0" step="1">
+            <span class="gen-setting-hint">Одинаковый seed даёт одинаковый результат. Пусто = случайно</span>
+          </div>
+          <div class="gen-setting gen-setting-wide">
+            <label for="genNegativePrompt" title="Что исключить из изображения (blurry, ugly и т.д.).">Негативный промпт:</label>
+            <input type="text" id="genNegativePrompt" placeholder="blurry, low quality, distorted..." class="gen-setting-input">
+            <span class="gen-setting-hint">Слова и фразы, которых нужно избегать в результате</span>
+          </div>
+          <div class="gen-setting">
+            <label for="genGuidance" title="Низкое = креативнее, высокое = строже следует промпту.">Guidance scale:</label>
+            <input type="number" id="genGuidance" placeholder="—" min="1" max="15" step="0.5" class="gen-setting-input">
+            <span class="gen-setting-hint">Строгость следования промпту. Flux: 2–5, SDXL: 7–10</span>
+          </div>
+          <div class="gen-setting">
+            <label for="genOutputFormat" title="webp меньше по размеру, png без потерь.">Формат вывода:</label>
+            <select id="genOutputFormat" class="gen-setting-input">
+              <option value="">По умолчанию</option>
+              <option value="webp">WebP</option>
+              <option value="png">PNG</option>
+            </select>
+            <span class="gen-setting-hint">webp компактнее, png без потерь</span>
+          </div>
+          <div class="gen-setting">
+            <label for="genOutputQuality" title="Только для webp. 80–90 обычно оптимально.">Качество (webp):</label>
+            <input type="number" id="genOutputQuality" placeholder="—" min="1" max="100" class="gen-setting-input">
+            <span class="gen-setting-hint">0–100, только для WebP. Пусто = по умолчанию</span>
+          </div>
+        </div>
       </div>
       <div class="gen-section">
         <label>Промпт (на английском лучше):</label>
@@ -651,11 +702,26 @@
 
     // Generation tab
     const genProxyUrl = document.getElementById('genProxyUrl');
+    const genPrompt = document.getElementById('genPrompt');
+
+    try {
+      const savedProxy = localStorage.getItem('ai-vision-proxy-url');
+      if (savedProxy) genProxyUrl.value = savedProxy;
+      const savedPrompt = localStorage.getItem('ai-vision-prompt');
+      if (savedPrompt) genPrompt.value = savedPrompt;
+    } catch (_) {}
+
+    genProxyUrl?.addEventListener('blur', () => {
+      try { localStorage.setItem('ai-vision-proxy-url', genProxyUrl.value || ''); } catch (_) {}
+    });
+    genPrompt?.addEventListener('blur', () => {
+      try { localStorage.setItem('ai-vision-prompt', genPrompt.value || ''); } catch (_) {}
+    });
+
     const genUpload = document.getElementById('genUpload');
     const genFileInput = document.getElementById('genFileInput');
     const genUploadPlaceholder = document.getElementById('genUploadPlaceholder');
     const genPreview = document.getElementById('genPreview');
-    const genPrompt = document.getElementById('genPrompt');
     const genBtn = document.getElementById('genBtn');
     const genStatus = document.getElementById('genStatus');
     const genResultWrap = document.getElementById('genResultWrap');
@@ -724,7 +790,14 @@
           body: JSON.stringify({
             prompt: genPrompt.value.trim(),
             image: genImageDataUrl,
-            model: (document.getElementById('genModel')?.value || 'flux_img2img')
+            model: (document.getElementById('genModel')?.value || 'flux_img2img'),
+            prompt_strength: parseFloat(document.getElementById('genPromptStrength')?.value) || 0.8,
+            num_inference_steps: parseInt(document.getElementById('genSteps')?.value, 10) || 28,
+            seed: (() => { const v = document.getElementById('genSeed')?.value; return v === '' || v === null ? undefined : parseInt(v, 10); })(),
+            negative_prompt: (document.getElementById('genNegativePrompt')?.value || '').trim() || undefined,
+            guidance_scale: (() => { const v = document.getElementById('genGuidance')?.value; return v === '' ? undefined : parseFloat(v); })(),
+            output_format: (document.getElementById('genOutputFormat')?.value || '').trim() || undefined,
+            output_quality: (() => { const v = document.getElementById('genOutputQuality')?.value; return v === '' ? undefined : parseInt(v, 10); })()
           })
         });
         const data = await res.json().catch(() => ({}));
@@ -743,8 +816,10 @@
         } else if (data.prediction_id) {
           const statusBase = base.replace(/\/api\/generate\/?$/, '').replace(/\/+$/, '') || base;
             const statusUrl = statusBase + (statusBase.endsWith('/api') ? '/status' : '/api/status');
-          for (let i = 0; i < 120; i++) {
-            genStatus.textContent = 'Генерация... ' + (i + 1) + ' с';
+          const maxWait = 300;
+          for (let i = 0; i < maxWait; i++) {
+            const s = i + 1;
+            genStatus.textContent = s >= 60 ? `Генерация... ${Math.floor(s / 60)} мин ${s % 60} с (макс. 5 мин)` : `Генерация... ${s} с`;
             await new Promise(r => setTimeout(r, 1000));
             const statusRes = await fetch(statusUrl + '?id=' + encodeURIComponent(data.prediction_id));
             const statusData = await statusRes.json().catch(() => ({}));
@@ -759,7 +834,7 @@
             }
           }
           if (!genResultWrap.style.display || genResultWrap.style.display === 'none') {
-            genStatus.textContent = 'Таймаут. Попробуйте ещё раз.';
+            genStatus.textContent = 'Таймаут (5 мин). Попробуйте ещё раз или выберите другую модель.';
           }
         } else {
           genStatus.textContent = 'В ответе нет URL изображения';
