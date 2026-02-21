@@ -750,18 +750,43 @@
       if (variantsItems.length) renderVariants(getSortedVariants());
     });
 
-    variantsGrid?.addEventListener('click', (e) => {
+    variantsGrid?.addEventListener('click', async (e) => {
       const btn = e.target.closest('.variant-use-gen');
       if (!btn || btn.disabled || !btn.dataset.src) return;
       const imageUrl = btn.dataset.src.trim();
       if (!imageUrl) return;
-      genImageDataUrl = imageUrl;
       genPreview.src = imageUrl;
       genPreview.style.display = 'block';
       genUploadPlaceholder.style.display = 'none';
       genUpload.classList.add('has-image');
-      updateGenBtn();
-      document.querySelector('.tab[data-tab="generate"]')?.click();
+      try {
+        if (imageUrl.startsWith('data:')) {
+          genImageDataUrl = imageUrl;
+        } else {
+          btn.disabled = true;
+          btn.textContent = '…';
+          const res = await fetch(imageUrl, { mode: 'cors' });
+          if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+          const blob = await res.blob();
+          const reader = new FileReader();
+          const rawDataUrl = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          genImageDataUrl = await compressImageForReplicate(rawDataUrl);
+        }
+      } catch (err) {
+        alert('Не удалось загрузить фото: ' + (err.message || err));
+        genImageDataUrl = null;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '→ Генерация';
+      }
+      if (genImageDataUrl) {
+        updateGenBtn();
+        document.querySelector('.tab[data-tab="generate"]')?.click();
+      }
     });
 
     // Generation tab
