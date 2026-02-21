@@ -532,6 +532,13 @@
         </div>
       </div>
       <div class="gen-section">
+        <label>Модель:</label>
+        <select id="genModel" class="gen-proxy-input">
+          <option value="flux_img2img">Flux img2img</option>
+          <option value="sdxl">SDXL img2img</option>
+        </select>
+      </div>
+      <div class="gen-section">
         <label>Промпт (на английском лучше):</label>
         <textarea id="genPrompt" class="gen-prompt-input" placeholder="например: same person in a forest, autumn lighting"></textarea>
       </div>
@@ -714,18 +721,46 @@
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: genPrompt.value.trim(), image: genImageDataUrl })
+          body: JSON.stringify({
+            prompt: genPrompt.value.trim(),
+            image: genImageDataUrl,
+            model: (document.getElementById('genModel')?.value || 'flux_img2img')
+          })
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const msg = data.error || res.statusText || res.status;
+          if (res.status === 402) {
+            throw new Error('На Replicate закончился кредит. Пополните баланс: replicate.com/account/billing');
+          }
+          const msg = data.error || data.detail || res.statusText || res.status;
           throw new Error(res.status + ' — ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)));
         }
-        const imageUrl = data.image_url ?? data.output?.[0] ?? data.url;
+        let imageUrl = data.image_url ?? data.output?.[0] ?? data.url;
         if (imageUrl) {
           genResult.src = imageUrl;
           genResultWrap.style.display = 'block';
           genStatus.textContent = '';
+        } else if (data.prediction_id) {
+          const statusBase = base.replace(/\/api\/generate\/?$/, '').replace(/\/+$/, '') || base;
+            const statusUrl = statusBase + (statusBase.endsWith('/api') ? '/status' : '/api/status');
+          for (let i = 0; i < 120; i++) {
+            genStatus.textContent = 'Генерация... ' + (i + 1) + ' с';
+            await new Promise(r => setTimeout(r, 1000));
+            const statusRes = await fetch(statusUrl + '?id=' + encodeURIComponent(data.prediction_id));
+            const statusData = await statusRes.json().catch(() => ({}));
+            if (statusData.status === 'succeeded' && statusData.image_url) {
+              genResult.src = statusData.image_url;
+              genResultWrap.style.display = 'block';
+              genStatus.textContent = '';
+              break;
+            }
+            if (statusData.status === 'failed' || statusData.status === 'canceled') {
+              throw new Error(statusData.error || statusData.status || 'Генерация не удалась');
+            }
+          }
+          if (!genResultWrap.style.display || genResultWrap.style.display === 'none') {
+            genStatus.textContent = 'Таймаут. Попробуйте ещё раз.';
+          }
         } else {
           genStatus.textContent = 'В ответе нет URL изображения';
         }
