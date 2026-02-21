@@ -377,6 +377,7 @@
       flex-wrap: wrap;
       gap: 0.5rem;
       padding: 1rem;
+      align-items: center;
     }
 
     .variant-badge {
@@ -392,9 +393,12 @@
     .variant-badge.views { color: #06b6d4; }
     .variant-badge.abtest { color: #f59e0b; }
     .variant-use-gen {
-      padding: 0.4rem 0.75rem;
+      margin-left: auto;
+      flex-shrink: 0;
+      padding: 0.5rem 1rem;
       font-family: inherit;
-      font-size: 0.8rem;
+      font-size: 0.9rem;
+      font-weight: 500;
       background: var(--accent);
       color: white;
       border: none;
@@ -402,7 +406,8 @@
       cursor: pointer;
       transition: background 0.2s;
     }
-    .variant-use-gen:hover { background: var(--accent-hover); }
+    .variant-use-gen:hover:not(:disabled) { background: var(--accent-hover); }
+    .variant-use-gen:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .gen-section { margin-bottom: 1.5rem; }
     .gen-section label { display: block; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
@@ -747,7 +752,7 @@
 
     variantsGrid?.addEventListener('click', (e) => {
       const btn = e.target.closest('.variant-use-gen');
-      if (!btn || !btn.dataset.src) return;
+      if (!btn || btn.disabled || !btn.dataset.src) return;
       const imageUrl = btn.dataset.src.trim();
       if (!imageUrl) return;
       genImageDataUrl = imageUrl;
@@ -912,7 +917,8 @@
 
     function renderVariants(items) {
       variantsGrid.innerHTML = items.map(item => {
-        const src = item.photo_path ? VARIANTS_BASE_URL + item.photo_path : '';
+        const path = item.photo_path ?? item.photo ?? item.image ?? item.url ?? '';
+        const src = path ? (path.startsWith('http') ? path : VARIANTS_BASE_URL + path) : '';
         const ctr = item.ctr != null ? item.ctr.toFixed(2) : '—';
         const views = item.views != null ? String(item.views) : '—';
         const abtest = item.abtest_id != null ? String(item.abtest_id) : '—';
@@ -922,7 +928,7 @@
             <span class="variant-badge ctr">ctr: ${ctr}</span>
             <span class="variant-badge views">views: ${views}</span>
             <span class="variant-badge abtest">abtest_id: ${abtest}</span>
-            ${src ? `<button type="button" class="variant-use-gen" data-src="${src}" title="Использовать для генерации">→ Генерация</button>` : ''}
+            <button type="button" class="variant-use-gen" data-src="${src || ''}" title="Использовать для генерации" ${!src ? 'disabled' : ''}>→ Генерация</button>
           </div>
         </div>`;
       }).join('');
