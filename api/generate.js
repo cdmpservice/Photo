@@ -71,9 +71,10 @@ export default async function handler(req, res) {
   } else if (modelKey === 'gpt_image_1_5') {
     input = {
       prompt: prompt.trim(),
-      image_input: [imageDataUrl],
+      input_images: [imageDataUrl],
       output_format: outputFormat || 'webp',
       quality: 'high',
+      input_fidelity: 'high',
     };
   } else {
     input = {
