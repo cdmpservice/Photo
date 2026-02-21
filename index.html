@@ -765,9 +765,17 @@
         } else {
           btn.disabled = true;
           btn.textContent = '…';
-          const res = await fetch(imageUrl, { mode: 'cors' });
-          if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
-          const blob = await res.blob();
+          let blob;
+          try {
+            const res = await fetch(imageUrl, { mode: 'cors' });
+            if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+            blob = await res.blob();
+          } catch (directErr) {
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(imageUrl);
+            const res = await fetch(proxyUrl, { mode: 'cors' });
+            if (!res.ok) throw new Error('CORS: ' + res.status);
+            blob = await res.blob();
+          }
           const reader = new FileReader();
           const rawDataUrl = await new Promise((resolve, reject) => {
             reader.onload = () => resolve(reader.result);
