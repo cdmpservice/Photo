@@ -391,6 +391,18 @@
     .variant-badge.ctr { color: #7c5cff; }
     .variant-badge.views { color: #06b6d4; }
     .variant-badge.abtest { color: #f59e0b; }
+    .variant-use-gen {
+      padding: 0.4rem 0.75rem;
+      font-family: inherit;
+      font-size: 0.8rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .variant-use-gen:hover { background: var(--accent-hover); }
 
     .gen-section { margin-bottom: 1.5rem; }
     .gen-section label { display: block; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
@@ -415,9 +427,33 @@
     }
     .gen-upload:hover { border-color: var(--accent); }
     .gen-upload.has-image { border-style: solid; }
-    .gen-upload img { max-width: 100%; max-height: 280px; display: block; margin: 0 auto; border-radius: 8px; }
-    .gen-result-wrap { margin-top: 1rem; text-align: center; }
-    .gen-result-wrap img { max-width: 100%; border-radius: 12px; border: 2px solid var(--bg-input); }
+    .gen-images-row {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      align-items: stretch;
+    }
+    .gen-image-slot {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .gen-image-slot label { display: block; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .gen-image-slot .gen-upload,
+    .gen-image-slot .gen-result-inner { min-height: 280px; }
+    .gen-image-slot img {
+      width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+      border-radius: 12px;
+      border: 2px solid var(--bg-input);
+    }
+    .gen-upload img { border: none; }
+    .gen-result-wrap { display: flex; flex-direction: column; height: 100%; }
+    .gen-result-wrap .gen-result-inner { flex: 1; display: flex; align-items: center; justify-content: center; }
     .gen-btn { margin-top: 1rem; }
     .gen-settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
     .gen-setting-wide { grid-column: 1 / -1; }
@@ -525,15 +561,28 @@
         <label>URL прокси:</label>
         <input type="url" id="genProxyUrl" class="gen-proxy-input" placeholder="https://ваш-проект.vercel.app или .../api/generate" autocomplete="off">
       </div>
-      <div class="gen-section">
-        <label>Исходное фото:</label>
-        <div class="gen-upload" id="genUpload">
-          <input type="file" id="genFileInput" accept="image/*" style="display:none">
-          <div id="genUploadPlaceholder">
-            <div class="upload-icon">🖼️</div>
-            <p class="upload-text">Загрузите фото</p>
+      <div class="gen-images-row">
+        <div class="gen-image-slot">
+          <label>Исходное фото:</label>
+          <div class="gen-upload" id="genUpload">
+            <input type="file" id="genFileInput" accept="image/*" style="display:none">
+            <div id="genUploadPlaceholder">
+              <div class="upload-icon">🖼️</div>
+              <p class="upload-text">Загрузите фото</p>
+            </div>
+            <img id="genPreview" alt="" style="display:none">
           </div>
-          <img id="genPreview" alt="" style="display:none">
+        </div>
+        <div class="gen-image-slot">
+          <label>Результат:</label>
+          <div id="genResultWrap" class="gen-result-wrap" style="display:none;">
+            <div class="gen-result-inner">
+              <img id="genResult" alt="Результат генерации">
+            </div>
+          </div>
+          <div id="genResultPlaceholder" class="gen-result-inner" style="display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.9rem; min-height:280px; border:2px dashed var(--bg-input); border-radius:12px;">
+            Сгенерированное фото появится здесь
+          </div>
         </div>
       </div>
       <div class="gen-section">
@@ -595,10 +644,6 @@
       </div>
       <button type="button" class="btn-detect gen-btn" id="genBtn" disabled>Сгенерировать</button>
       <p class="status" id="genStatus"></p>
-      <div id="genResultWrap" class="gen-result-wrap" style="display:none;">
-        <p style="color: var(--text-muted); margin-bottom: 0.5rem;">Результат:</p>
-        <img id="genResult" alt="Результат генерации">
-      </div>
     </div>
   </div>
 
@@ -700,6 +745,20 @@
       if (variantsItems.length) renderVariants(getSortedVariants());
     });
 
+    variantsGrid?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.variant-use-gen');
+      if (!btn || !btn.dataset.src) return;
+      const imageUrl = btn.dataset.src.trim();
+      if (!imageUrl) return;
+      genImageDataUrl = imageUrl;
+      genPreview.src = imageUrl;
+      genPreview.style.display = 'block';
+      genUploadPlaceholder.style.display = 'none';
+      genUpload.classList.add('has-image');
+      updateGenBtn();
+      document.querySelector('.tab[data-tab="generate"]')?.click();
+    });
+
     // Generation tab
     const genProxyUrl = document.getElementById('genProxyUrl');
     const genPrompt = document.getElementById('genPrompt');
@@ -726,6 +785,7 @@
     const genStatus = document.getElementById('genStatus');
     const genResultWrap = document.getElementById('genResultWrap');
     const genResult = document.getElementById('genResult');
+    const genResultPlaceholder = document.getElementById('genResultPlaceholder');
 
     let genImageDataUrl = null;
 
@@ -782,6 +842,7 @@
       const url = base + (base.endsWith('/api/generate') ? '' : '/api/generate');
       genStatus.textContent = 'Генерация...';
       genResultWrap.style.display = 'none';
+      genResultPlaceholder.style.display = 'flex';
       genBtn.disabled = true;
       try {
         const res = await fetch(url, {
@@ -811,7 +872,8 @@
         let imageUrl = data.image_url ?? data.output?.[0] ?? data.url;
         if (imageUrl) {
           genResult.src = imageUrl;
-          genResultWrap.style.display = 'block';
+          genResultWrap.style.display = 'flex';
+          genResultPlaceholder.style.display = 'none';
           genStatus.textContent = '';
         } else if (data.prediction_id) {
           const statusBase = base.replace(/\/api\/generate\/?$/, '').replace(/\/+$/, '') || base;
@@ -825,7 +887,8 @@
             const statusData = await statusRes.json().catch(() => ({}));
             if (statusData.status === 'succeeded' && statusData.image_url) {
               genResult.src = statusData.image_url;
-              genResultWrap.style.display = 'block';
+              genResultWrap.style.display = 'flex';
+              genResultPlaceholder.style.display = 'none';
               genStatus.textContent = '';
               break;
             }
@@ -834,6 +897,7 @@
             }
           }
           if (!genResultWrap.style.display || genResultWrap.style.display === 'none') {
+            genResultPlaceholder.style.display = 'flex';
             genStatus.textContent = 'Таймаут (5 мин). Попробуйте ещё раз или выберите другую модель.';
           }
         } else {
@@ -858,6 +922,7 @@
             <span class="variant-badge ctr">ctr: ${ctr}</span>
             <span class="variant-badge views">views: ${views}</span>
             <span class="variant-badge abtest">abtest_id: ${abtest}</span>
+            ${src ? `<button type="button" class="variant-use-gen" data-src="${src}" title="Использовать для генерации">→ Генерация</button>` : ''}
           </div>
         </div>`;
       }).join('');
