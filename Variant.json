@@ -1,0 +1,758 @@
+[
+  {
+    "id": 104,
+    "abtest_id": 32,
+    "ctr": 5.12,
+    "views": 1153,
+    "photo_path": "4295048/433806022/50870ce7-335c-4776-ab85-416f91b80890.webp"
+  },
+  {
+    "id": 313,
+    "abtest_id": 86,
+    "ctr": 7.41,
+    "views": 4547,
+    "photo_path": "1196436/542096968/3a69988b-263a-45c5-b9d4-79263f46bef3.webp"
+  },
+  {
+    "id": 1410,
+    "abtest_id": 350,
+    "ctr": 5.15,
+    "views": 2390,
+    "photo_path": "250052086/588883660/44b95939-95b7-40cf-af52-1cf0f12dc8e3.webp"
+  },
+  {
+    "id": 1426,
+    "abtest_id": 353,
+    "ctr": 6.17,
+    "views": 1038,
+    "photo_path": "250035919/681976940/be463558-4002-4c46-be4c-a5a0ce59ece5.jpg"
+  },
+  {
+    "id": 1723,
+    "abtest_id": 417,
+    "ctr": 5.34,
+    "views": 5004,
+    "photo_path": "411913/234566439/b271c5a8-56ee-4f58-9e26-ae570217c894.png"
+  },
+  {
+    "id": 1845,
+    "abtest_id": 441,
+    "ctr": 9.74,
+    "views": 10005,
+    "photo_path": "319425/338665646/62a44341-a5ce-42f4-9d00-7f76f41003e2.png"
+  },
+  {
+    "id": 1964,
+    "abtest_id": 462,
+    "ctr": 8.50,
+    "views": 4211,
+    "photo_path": "450364/497755107/dc75108d-9cce-4046-aa40-620611f379b3.webp"
+  },
+  {
+    "id": 2198,
+    "abtest_id": 516,
+    "ctr": 5.49,
+    "views": 1002,
+    "photo_path": "12458/152657003/1be5f702-4477-4e3a-bc8d-665d7f4b1047.webp"
+  },
+  {
+    "id": 2374,
+    "abtest_id": 558,
+    "ctr": 5.83,
+    "views": 10022,
+    "photo_path": "475547/243036136/19d5bf7e-f0be-4099-be5d-b8ea1ec187a1.webp"
+  },
+  {
+    "id": 2675,
+    "abtest_id": 619,
+    "ctr": 6.50,
+    "views": 1030,
+    "photo_path": "4225142/492930508/e1026dd2-31b2-41b0-a9bf-d6e2c0e3eb9f.webp"
+  },
+  {
+    "id": 2730,
+    "abtest_id": 633,
+    "ctr": 5.18,
+    "views": 1003,
+    "photo_path": "1353093/176342614/611c8d90-ab7a-4656-aff2-079b08a4374b.png"
+  },
+  {
+    "id": 3013,
+    "abtest_id": 696,
+    "ctr": 5.99,
+    "views": 2903,
+    "photo_path": "250078098/687612786/d19e5427-323c-4181-a20d-4e6dc03f5d9a.jpg"
+  },
+  {
+    "id": 3144,
+    "abtest_id": 729,
+    "ctr": 8.44,
+    "views": 1043,
+    "photo_path": "1230990/649480352/2fdfbbba-78a8-4e1a-9ef8-95d7044c07e1.jpg"
+  },
+  {
+    "id": 3372,
+    "abtest_id": 781,
+    "ctr": 6.90,
+    "views": 1130,
+    "photo_path": "121679/584436652/18f96c7a-8640-4dff-b242-2bbc40dac134.png"
+  },
+  {
+    "id": 3958,
+    "abtest_id": 928,
+    "ctr": 5.59,
+    "views": 1001,
+    "photo_path": "250071811/701590604/8c10689e-d588-417b-91ef-275889fa8ad4.webp"
+  },
+  {
+    "id": 4212,
+    "abtest_id": 977,
+    "ctr": 5.87,
+    "views": 1023,
+    "photo_path": "121679/641096641/96a59eb9-5983-4f51-a211-7ceb40cc5d6c.png"
+  },
+  {
+    "id": 4452,
+    "abtest_id": 1031,
+    "ctr": 6.01,
+    "views": 6273,
+    "photo_path": "250073359/743427787/8814555d-bfd5-4ba9-9115-857641d8e6f4.png"
+  },
+  {
+    "id": 4486,
+    "abtest_id": 1038,
+    "ctr": 9.29,
+    "views": 5369,
+    "photo_path": "450364/497755107/dc75108d-9cce-4046-aa40-620611f379b3.webp"
+  },
+  {
+    "id": 4519,
+    "abtest_id": 1047,
+    "ctr": 7.16,
+    "views": 1006,
+    "photo_path": "1378218/247536439/274edf80-30e8-4c3c-b96b-c483209ab3b5.webp"
+  },
+  {
+    "id": 4526,
+    "abtest_id": 1050,
+    "ctr": 7.35,
+    "views": 5240,
+    "photo_path": "900231/211345325/94163ec3-b15b-47d3-b3c5-b8b4ef492691.webp"
+  },
+  {
+    "id": 4914,
+    "abtest_id": 1127,
+    "ctr": 5.49,
+    "views": 3554,
+    "photo_path": "574656/733012428/de992e7d-3a6b-4506-ba74-267e2a5a6e7b.png"
+  },
+  {
+    "id": 5227,
+    "abtest_id": 1202,
+    "ctr": 6.89,
+    "views": 3063,
+    "photo_path": "250034175/556822028/b455a4d3-30b1-4c65-97c2-1297f6ecfadf.webp"
+  },
+  {
+    "id": 5256,
+    "abtest_id": 1209,
+    "ctr": 6.78,
+    "views": 1091,
+    "photo_path": "89957/31954762/archive/63c76928-2377-428f-b573-8d3377bc189d.jpg"
+  },
+  {
+    "id": 5258,
+    "abtest_id": 1210,
+    "ctr": 7.24,
+    "views": 2003,
+    "photo_path": "1353093/304615461/1ae99ab7-59e3-4374-a7c7-cd49aa5f2704.png"
+  },
+  {
+    "id": 5409,
+    "abtest_id": 1250,
+    "ctr": 5.63,
+    "views": 1013,
+    "photo_path": "4067626/221602559/56fe84ac-c9bd-43af-81ab-25970b1ee418.webp"
+  },
+  {
+    "id": 5614,
+    "abtest_id": 1298,
+    "ctr": 6.99,
+    "views": 5696,
+    "photo_path": "429605/133686512/dfe5e531-627a-4484-853b-f3610e5a2eae.webp"
+  },
+  {
+    "id": 5676,
+    "abtest_id": 1309,
+    "ctr": 9.89,
+    "views": 2003,
+    "photo_path": "1353093/304615461/e7741edf-20a7-4f3b-953b-eeac7d4e17d2.png"
+  },
+  {
+    "id": 5748,
+    "abtest_id": 1320,
+    "ctr": 5.03,
+    "views": 2682,
+    "photo_path": "17145/741917115/56978175-5869-4254-b4fd-c429e01d9b9b.png"
+  },
+  {
+    "id": 5808,
+    "abtest_id": 1335,
+    "ctr": 5.24,
+    "views": 1088,
+    "photo_path": "4504797/376269802/0d28bec2-660f-4ac3-8825-f0f218e940fc.png"
+  },
+  {
+    "id": 5978,
+    "abtest_id": 1373,
+    "ctr": 7.29,
+    "views": 9081,
+    "photo_path": "1367652/751045221/0cc341c8-3a08-4fc6-a7ff-0353a9fa8101.png"
+  },
+  {
+    "id": 6010,
+    "abtest_id": 1381,
+    "ctr": 7.22,
+    "views": 8445,
+    "photo_path": "1168429/456551439/71fd30b9-811d-4657-a27b-389c87778d1f.webp"
+  },
+  {
+    "id": 6243,
+    "abtest_id": 1429,
+    "ctr": 6.72,
+    "views": 3020,
+    "photo_path": "574656/733012428/6bfafd4e-56bf-4f60-bb64-25f431bc3d1f.webp"
+  },
+  {
+    "id": 6393,
+    "abtest_id": 1464,
+    "ctr": 7.16,
+    "views": 1005,
+    "photo_path": "1144359/655795443/2190eb06-dd58-4deb-a1e0-cadda18dcde4.png"
+  },
+  {
+    "id": 6641,
+    "abtest_id": 1515,
+    "ctr": 8.35,
+    "views": 1221,
+    "photo_path": "782637/632257276/09520cd9-833d-4fdf-b403-e8e92ff6e66c.webp"
+  },
+  {
+    "id": 6761,
+    "abtest_id": 1549,
+    "ctr": 5.20,
+    "views": 2998,
+    "photo_path": "1221056/460357763/6d3a1048-068e-44bc-9e82-89e0b54c1be0.webp"
+  },
+  {
+    "id": 6790,
+    "abtest_id": 1555,
+    "ctr": 5.58,
+    "views": 1057,
+    "photo_path": "1283468/528819486/6c6d93bd-ea2d-49b0-8962-83576f9272ce.webp"
+  },
+  {
+    "id": 6872,
+    "abtest_id": 1574,
+    "ctr": 9.84,
+    "views": 1108,
+    "photo_path": "867806/316678649/1b149d0e-1fde-4640-b303-49cac66b2255.webp"
+  },
+  {
+    "id": 6989,
+    "abtest_id": 1596,
+    "ctr": 5.53,
+    "views": 2008,
+    "photo_path": "574656/465968220/30a47106-f47b-4459-be5b-5987e4fc6e7a.png"
+  },
+  {
+    "id": 7003,
+    "abtest_id": 1600,
+    "ctr": 9.15,
+    "views": 10002,
+    "photo_path": "319425/338665646/3c9799be-2bb6-4456-b143-ee6df50dd7f5.webp"
+  },
+  {
+    "id": 7064,
+    "abtest_id": 1613,
+    "ctr": 7.88,
+    "views": 1319,
+    "photo_path": "571792/142924394/8201772f-330f-4606-a2c7-e61c82b8803b.webp"
+  },
+  {
+    "id": 7139,
+    "abtest_id": 1630,
+    "ctr": 5.93,
+    "views": 1653,
+    "photo_path": "250068317/118787449/c19f076d-8ad1-4366-9d7a-70fb67594c2a.webp"
+  },
+  {
+    "id": 7536,
+    "abtest_id": 1712,
+    "ctr": 5.30,
+    "views": 1264,
+    "photo_path": "4535601/690962647/19bc3b1f-7ec7-4109-8b12-22b48b1eadd9.jpg"
+  },
+  {
+    "id": 7600,
+    "abtest_id": 1728,
+    "ctr": 5.91,
+    "views": 2164,
+    "photo_path": "1201697/723473343/61b1f277-b0b3-4bba-ab03-c42edb659ed8.png"
+  },
+  {
+    "id": 7662,
+    "abtest_id": 1748,
+    "ctr": 6.15,
+    "views": 1950,
+    "photo_path": "45747/13222297/4971367b-0b08-4397-8472-95f328aa42de.webp"
+  },
+  {
+    "id": 7683,
+    "abtest_id": 1752,
+    "ctr": 7.38,
+    "views": 2264,
+    "photo_path": "837848/667787619/ed61fb7d-3f98-4d3f-8d3d-e23ea4ef7d8e.webp"
+  },
+  {
+    "id": 7957,
+    "abtest_id": 1806,
+    "ctr": 6.00,
+    "views": 4681,
+    "photo_path": "4183873/326831972/e857fc8d-9af3-4f86-bac1-a1734e0e8ece.webp"
+  },
+  {
+    "id": 8041,
+    "abtest_id": 1830,
+    "ctr": 6.11,
+    "views": 11818,
+    "photo_path": "1218294/764997347/f7fb82e3-3158-441a-aebf-73a68e659026.png"
+  },
+  {
+    "id": 8270,
+    "abtest_id": 1875,
+    "ctr": 5.71,
+    "views": 2312,
+    "photo_path": "1201697/723473343/22340bb1-a4b2-4895-9eb7-5ef5fc4b4109.webp"
+  },
+  {
+    "id": 8485,
+    "abtest_id": 1913,
+    "ctr": 5.32,
+    "views": 1071,
+    "photo_path": "12458/376378018/07d6bd9f-8713-4c0c-b251-d3886a864b3e.webp"
+  },
+  {
+    "id": 8659,
+    "abtest_id": 1950,
+    "ctr": 5.36,
+    "views": 1063,
+    "photo_path": "89957/31954762/archive/93607ebd-61de-4d5a-bc0b-ff9894fd7482.webp"
+  },
+  {
+    "id": 8800,
+    "abtest_id": 1987,
+    "ctr": 5.13,
+    "views": 3548,
+    "photo_path": "1201697/723473343/732a5211-f0f5-48d4-b0b3-edda67f81bba.webp"
+  },
+  {
+    "id": 8831,
+    "abtest_id": 1994,
+    "ctr": 6.22,
+    "views": 3213,
+    "photo_path": "946849/430650015/c6d3178c-95d2-4689-b4cd-dfa47df0d2f1.jpg"
+  },
+  {
+    "id": 8863,
+    "abtest_id": 2002,
+    "ctr": 6.37,
+    "views": 1586,
+    "photo_path": "849153/206760798/76dd07e6-76ca-438d-a4b7-9167e429760e.webp"
+  },
+  {
+    "id": 9067,
+    "abtest_id": 2050,
+    "ctr": 5.17,
+    "views": 2594,
+    "photo_path": "849153/206760796/cbb2896f-5f3e-455e-89b7-607e3a98a4f0.webp"
+  },
+  {
+    "id": 9095,
+    "abtest_id": 2058,
+    "ctr": 6.32,
+    "views": 2579,
+    "photo_path": "4118254/237023601/11828124-8675-4610-aec9-81f947299a26.webp"
+  },
+  {
+    "id": 9515,
+    "abtest_id": 2142,
+    "ctr": 6.42,
+    "views": 1823,
+    "photo_path": "1283374/218688035/782e4f6d-ffa4-4a62-890f-6b7aa3d41014.png"
+  },
+  {
+    "id": 9604,
+    "abtest_id": 2165,
+    "ctr": 5.37,
+    "views": 1118,
+    "photo_path": "51670/543617249/ab7ecc72-c437-43d0-a1d6-00461dc31ae4.jpg"
+  },
+  {
+    "id": 9659,
+    "abtest_id": 2176,
+    "ctr": 7.48,
+    "views": 1430,
+    "photo_path": "524528/705170953/e0c5c109-b8f7-47dc-8f1c-0e2b0ce430d9.jpg"
+  },
+  {
+    "id": 9677,
+    "abtest_id": 2181,
+    "ctr": 7.12,
+    "views": 1531,
+    "photo_path": "250031013/782500112/ed58f0d6-5ad8-4130-ab67-b0e6aaa35ae2.webp"
+  },
+  {
+    "id": 9768,
+    "abtest_id": 2197,
+    "ctr": 7.07,
+    "views": 4863,
+    "photo_path": "250002234/460413191/c1e64665-5342-46d9-a2f7-0087b845fb83.jpg"
+  },
+  {
+    "id": 9771,
+    "abtest_id": 2198,
+    "ctr": 5.31,
+    "views": 1017,
+    "photo_path": "17145/483080805/f08f9ec0-41ab-4a9b-83ef-c7917fd8e93b.png"
+  },
+  {
+    "id": 9944,
+    "abtest_id": 2234,
+    "ctr": 7.00,
+    "views": 9945,
+    "photo_path": "566355/265818811/71b2e854-91cf-4141-a928-b5282bb7d730.png"
+  },
+  {
+    "id": 9955,
+    "abtest_id": 2236,
+    "ctr": 5.96,
+    "views": 4326,
+    "photo_path": "45747/13222299/e669ef89-40c1-4097-9c85-e21f87fd0b7b.jpg"
+  },
+  {
+    "id": 10575,
+    "abtest_id": 2360,
+    "ctr": 6.90,
+    "views": 1232,
+    "photo_path": "1291911/669820473/8e578815-3a0f-43e1-871b-2ee2633083f4.png"
+  },
+  {
+    "id": 10650,
+    "abtest_id": 2373,
+    "ctr": 6.29,
+    "views": 2018,
+    "photo_path": "837848/204490765/0495bcb2-6600-4318-916c-bb1b09197a89.png"
+  },
+  {
+    "id": 10776,
+    "abtest_id": 2403,
+    "ctr": 5.23,
+    "views": 3195,
+    "photo_path": "207757/760849265/341beebd-bf62-4eae-8293-3f59e8cc7f43.jpg"
+  },
+  {
+    "id": 10940,
+    "abtest_id": 2435,
+    "ctr": 5.11,
+    "views": 1037,
+    "photo_path": "837848/317395881/ac8053f0-89e9-4107-aca6-eca4d0887a44.png"
+  },
+  {
+    "id": 10983,
+    "abtest_id": 2444,
+    "ctr": 5.34,
+    "views": 1029,
+    "photo_path": "837848/317395870/cdf4a3f8-7b81-47bd-8c4e-6ab07860f16d.png"
+  },
+  {
+    "id": 11145,
+    "abtest_id": 2475,
+    "ctr": 6.10,
+    "views": 2343,
+    "photo_path": "450364/255613273/0943c497-8ae7-41f9-b9d7-13990724d896.jpg"
+  },
+  {
+    "id": 11185,
+    "abtest_id": 2484,
+    "ctr": 10.83,
+    "views": 2982,
+    "photo_path": "4069908/387494196/3acafffb-e8b7-44c9-9410-706d604f3590.webp"
+  },
+  {
+    "id": 11280,
+    "abtest_id": 2503,
+    "ctr": 6.02,
+    "views": 1760,
+    "photo_path": "4347835/552610204/4c07451f-7161-4ac1-afed-d69923f57768.webp"
+  },
+  {
+    "id": 11590,
+    "abtest_id": 2570,
+    "ctr": 5.39,
+    "views": 1001,
+    "photo_path": "220792/250271781/376608f5-5ad9-4272-bdc9-237590b208e1.webp"
+  },
+  {
+    "id": 11670,
+    "abtest_id": 2585,
+    "ctr": 8.49,
+    "views": 1225,
+    "photo_path": "1283238/165130785/cfded34f-6670-4e01-87fa-aa6a2790473f.png"
+  },
+  {
+    "id": 11724,
+    "abtest_id": 2595,
+    "ctr": 5.56,
+    "views": 4806,
+    "photo_path": "566355/434060871/61f85771-0fb6-4357-aee7-960a6979a1e3.webp"
+  },
+  {
+    "id": 11870,
+    "abtest_id": 2626,
+    "ctr": 6.76,
+    "views": 7383,
+    "photo_path": "4043154/444204478/a867ba47-0f44-4a82-8702-278c66173ed3.webp"
+  },
+  {
+    "id": 12022,
+    "abtest_id": 2658,
+    "ctr": 9.25,
+    "views": 1005,
+    "photo_path": "574656/755028981/e55c5b0b-39ae-4bff-bfe5-5a27b16cb931.png"
+  },
+  {
+    "id": 12086,
+    "abtest_id": 2672,
+    "ctr": 5.97,
+    "views": 3168,
+    "photo_path": "250005791/420203949/60f41dc6-b0a2-4f9c-a384-75a809606e4e.png"
+  },
+  {
+    "id": 12184,
+    "abtest_id": 2696,
+    "ctr": 8.29,
+    "views": 1001,
+    "photo_path": "296237/437183930/06350b0f-4f9e-4a5b-9114-37700a8559f6.png"
+  },
+  {
+    "id": 12490,
+    "abtest_id": 2774,
+    "ctr": 6.45,
+    "views": 3179,
+    "photo_path": "450519/150880620/eb585be1-e76a-456c-8d5c-d7a983b9c056.webp"
+  },
+  {
+    "id": 12543,
+    "abtest_id": 2788,
+    "ctr": 6.08,
+    "views": 5920,
+    "photo_path": "900231/234282459/4d63530f-06c8-42cd-9825-59fe87e64a6f.webp"
+  },
+  {
+    "id": 12628,
+    "abtest_id": 2806,
+    "ctr": 6.67,
+    "views": 1004,
+    "photo_path": "255231/311905357/e1b75f6a-161a-4456-894e-a055bd12dbe7.jpg"
+  },
+  {
+    "id": 12633,
+    "abtest_id": 2807,
+    "ctr": 5.82,
+    "views": 2423,
+    "photo_path": "255231/319080049/3f2fcaee-99f5-452e-ab16-4cec9f3f4487.jpg"
+  },
+  {
+    "id": 12693,
+    "abtest_id": 2818,
+    "ctr": 6.36,
+    "views": 1053,
+    "photo_path": "89957/71883352/aba6272a-1ec3-4b09-9f35-0230e0f290d0.webp"
+  },
+  {
+    "id": 12827,
+    "abtest_id": 2845,
+    "ctr": 6.59,
+    "views": 1867,
+    "photo_path": "4511414/378705014/3d4a7e04-2d1e-4803-ad55-33220e41e701.webp"
+  },
+  {
+    "id": 13058,
+    "abtest_id": 2891,
+    "ctr": 5.90,
+    "views": 2000,
+    "photo_path": "837848/204821487/94ced16e-7e05-4f6c-a365-5a574051c56e.webp"
+  },
+  {
+    "id": 13138,
+    "abtest_id": 2912,
+    "ctr": 5.22,
+    "views": 4003,
+    "photo_path": "837848/732971727/368bb20c-403d-485c-a2eb-65af1c5f06a5.png"
+  },
+  {
+    "id": 13321,
+    "abtest_id": 2955,
+    "ctr": 7.50,
+    "views": 2466,
+    "photo_path": "657017/706917212/ec75e072-2735-407c-82a5-a9655fe685c2.png"
+  },
+  {
+    "id": 13329,
+    "abtest_id": 2958,
+    "ctr": 6.56,
+    "views": 7099,
+    "photo_path": "134165/378815922/afbfe510-4386-40bb-bd09-bce7a02fb6d1.jpg"
+  },
+  {
+    "id": 13336,
+    "abtest_id": 2960,
+    "ctr": 5.77,
+    "views": 1282,
+    "photo_path": "223708/591122450/7be9d3b0-540d-4481-b466-0f7d8fb311b6.webp"
+  },
+  {
+    "id": 13515,
+    "abtest_id": 2987,
+    "ctr": 5.77,
+    "views": 3309,
+    "photo_path": "576998/525183894/e6462db4-3b1a-435f-bd5d-f8e8eacfcac2.webp"
+  },
+  {
+    "id": 13751,
+    "abtest_id": 3033,
+    "ctr": 6.25,
+    "views": 6030,
+    "photo_path": "600829/169282944/8369c94a-35d4-411d-b403-54a8719a055a.jpg"
+  },
+  {
+    "id": 13962,
+    "abtest_id": 3076,
+    "ctr": 5.84,
+    "views": 1010,
+    "photo_path": "89957/31954762/8ae70351-1d81-4e15-8d3a-c8b26c37ba30.webp"
+  },
+  {
+    "id": 14856,
+    "abtest_id": 3253,
+    "ctr": 7.05,
+    "views": 1049,
+    "photo_path": "89957/229837927/4c258643-180c-4c3d-9379-e2951026baf4.jpg"
+  },
+  {
+    "id": 15512,
+    "abtest_id": 3389,
+    "ctr": 5.40,
+    "views": 2000,
+    "photo_path": "609317/734170264/ea4b0223-be24-47ab-960c-0e9e54b05027.webp"
+  },
+  {
+    "id": 15637,
+    "abtest_id": 3413,
+    "ctr": 8.15,
+    "views": 1240,
+    "photo_path": "1291911/722493660/c592f2c7-fd5e-4d0f-bb1e-329a1be4c492.png"
+  },
+  {
+    "id": 16219,
+    "abtest_id": 3530,
+    "ctr": 5.27,
+    "views": 1024,
+    "photo_path": "1189417/608637168/ca917f67-9796-4b23-9ba4-047048693cbd.png"
+  },
+  {
+    "id": 16226,
+    "abtest_id": 3532,
+    "ctr": 5.09,
+    "views": 2868,
+    "photo_path": "893398/697477204/7be575d5-479d-49e2-abd0-2b7bb27c50ca.webp"
+  },
+  {
+    "id": 16277,
+    "abtest_id": 3542,
+    "ctr": 5.55,
+    "views": 1586,
+    "photo_path": "4565323/401468737/0d8d7921-ed03-4aa7-93e5-9b8954429484.png"
+  },
+  {
+    "id": 16333,
+    "abtest_id": 3553,
+    "ctr": 6.84,
+    "views": 1009,
+    "photo_path": "80123/613703891/4ecea870-bee8-470c-9a1a-9ee2bd43832e.jpg"
+  },
+  {
+    "id": 16420,
+    "abtest_id": 3569,
+    "ctr": 5.47,
+    "views": 1006,
+    "photo_path": "41285/237129035/ca2e6074-2f47-48ac-8884-c9364774fc6f.webp"
+  },
+  {
+    "id": 16667,
+    "abtest_id": 3610,
+    "ctr": 5.07,
+    "views": 2071,
+    "photo_path": "1181048/496217951/6bfacc58-ac6a-403f-9e5e-88b42d981a56.webp"
+  },
+  {
+    "id": 16697,
+    "abtest_id": 3619,
+    "ctr": 5.76,
+    "views": 1007,
+    "photo_path": "250071811/807179551/3c62adcf-1316-4b22-9161-9f62dd2762f3.jpg"
+  },
+  {
+    "id": 16765,
+    "abtest_id": 3635,
+    "ctr": 7.56,
+    "views": 1084,
+    "photo_path": "89957/237548846/41da29ac-f717-4ce5-a1c6-cb9280ce7fd8.jpg"
+  },
+  {
+    "id": 16778,
+    "abtest_id": 3638,
+    "ctr": 5.59,
+    "views": 1056,
+    "photo_path": "51670/632090395/e1fcb221-e9b0-491b-960c-509e5733c39a.webp"
+  },
+  {
+    "id": 16905,
+    "abtest_id": 3666,
+    "ctr": 6.01,
+    "views": 5043,
+    "photo_path": "1144359/482958350/8f90a17d-c064-4804-93a0-716ea35e4a3c.jpg"
+  },
+  {
+    "id": 17013,
+    "abtest_id": 3694,
+    "ctr": 5.45,
+    "views": 1358,
+    "photo_path": "250013682/768662276/ff44e0d5-c102-4ae7-8421-5a790ba3fa0c.webp"
+  },
+  {
+    "id": 17558,
+    "abtest_id": 3812,
+    "ctr": 5.55,
+    "views": 1641,
+    "photo_path": "3982463/773179238/9f806bfb-f40c-4588-846f-55fa440d5367.png"
+  },
+  {
+    "id": 17637,
+    "abtest_id": 3827,
+    "ctr": 8.43,
+    "views": 1115,
+    "photo_path": "45747/13222294/05562e0e-f8a1-40db-a85b-6dc43e8bf796.png"
+  }
+]

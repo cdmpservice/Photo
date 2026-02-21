@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Env and secrets
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo

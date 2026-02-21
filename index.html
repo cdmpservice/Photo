@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Определение объектов на фото</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap');
+
+    :root {
+      --bg-dark: #0f0f12;
+      --bg-card: #18181c;
+      --bg-input: #232328;
+      --accent: #7c5cff;
+      --accent-hover: #9178ff;
+      --success: #34d399;
+      --text: #e4e4e7;
+      --text-muted: #a1a1aa;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 92, 255, 0.15), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(124, 92, 255, 0.08), transparent);
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      font-weight: 400;
+      margin-bottom: 1.5rem;
+    }
+
+    .search-row {
+      margin-bottom: 1.5rem;
+    }
+
+    .object-input {
+      width: 100%;
+      max-width: 500px;
+      display: block;
+      margin: 0 auto;
+      padding: 0.9rem 1.2rem;
+      font-family: inherit;
+      font-size: 1rem;
+      background: var(--bg-card);
+      border: 2px solid var(--bg-input);
+      border-radius: 12px;
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+
+    .object-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .object-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .en-labels {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: center;
+      min-height: 1.2em;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--bg-input);
+      border-radius: 16px;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: var(--bg-card);
+      margin-bottom: 2rem;
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(124, 92, 255, 0.06);
+    }
+
+    .upload-zone.has-image {
+      padding: 1rem;
+    }
+
+    .upload-zone input {
+      display: none;
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.7;
+    }
+
+    .upload-text {
+      font-size: 1.1rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .upload-hint {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .preview-wrapper {
+      position: relative;
+      display: inline-block;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+
+    #preview {
+      max-width: 100%;
+      max-height: 400px;
+      border-radius: 12px;
+      display: block;
+      vertical-align: top;
+    }
+
+    #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 500;
+      padding: 0.6rem 1.25rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-detect {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-detect:hover:not(:disabled) {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-detect:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-clear {
+      background: var(--bg-input);
+      color: var(--text);
+    }
+
+    .btn-clear:hover {
+      background: #2d2d33;
+    }
+
+    .btn-masks {
+      background: #2d3a4a;
+      color: var(--success);
+    }
+
+    .btn-masks:hover:not(:disabled) {
+      background: #3d4a5a;
+    }
+
+    .btn-clipseg {
+      background: #2a3d2a;
+      color: #7dd87d;
+    }
+
+    .btn-clipseg:hover:not(:disabled) {
+      background: #3a4d3a;
+    }
+
+    .status {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    .status.loading {
+      color: var(--accent);
+    }
+
+    .status.success {
+      color: var(--success);
+    }
+
+    .results-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .results-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .results-list {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .result-item {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: var(--bg-input);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      gap: 0.25rem;
+    }
+
+    .result-class {
+      font-weight: 500;
+    }
+
+    .result-confidence {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--success);
+    }
+
+    .result-item-best {
+      border-left: 3px solid var(--success);
+    }
+
+    .result-size {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid var(--bg-input);
+    }
+
+    .tab {
+      padding: 0.75rem 1.5rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 1rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.2s;
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .variants-upload {
+      border: 2px dashed var(--bg-input);
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      background: var(--bg-card);
+      margin-bottom: 1.5rem;
+    }
+
+    .variants-upload:hover { border-color: var(--accent); }
+
+    .variants-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .variants-controls label {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .variants-sort {
+      padding: 0.5rem 1rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      background: var(--bg-input);
+      border: 2px solid var(--bg-card);
+      border-radius: 8px;
+      color: var(--text);
+    }
+
+    .variants-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .variant-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--bg-input);
+    }
+
+    .variant-card img {
+      width: 100%;
+      aspect-ratio: 700 / 900;
+      object-fit: cover;
+      display: block;
+      background: var(--bg-input);
+    }
+
+    .variant-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 1rem;
+    }
+
+    .variant-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.6rem;
+      background: var(--bg-input);
+      border-radius: 6px;
+      color: var(--success);
+    }
+
+    .variant-badge.ctr { color: #7c5cff; }
+    .variant-badge.views { color: #06b6d4; }
+    .variant-badge.abtest { color: #f59e0b; }
+
+    .gen-section { margin-bottom: 1.5rem; }
+    .gen-section label { display: block; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .gen-proxy-input, .gen-prompt-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: var(--bg-input);
+      border: 2px solid var(--bg-card);
+      border-radius: 10px;
+      color: var(--text);
+    }
+    .gen-prompt-input { min-height: 100px; resize: vertical; }
+    .gen-upload {
+      border: 2px dashed var(--bg-input);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      background: var(--bg-card);
+    }
+    .gen-upload:hover { border-color: var(--accent); }
+    .gen-upload.has-image { border-style: solid; }
+    .gen-upload img { max-width: 100%; max-height: 280px; display: block; margin: 0 auto; border-radius: 8px; }
+    .gen-result-wrap { margin-top: 1rem; text-align: center; }
+    .gen-result-wrap img { max-width: 100%; border-radius: 12px; border: 2px solid var(--bg-input); }
+    .gen-btn { margin-top: 1rem; }
+
+    .gen-howto {
+      background: var(--bg-card);
+      border: 2px solid var(--bg-input);
+      border-radius: 12px;
+      padding: 0 1rem 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .gen-howto summary {
+      cursor: pointer;
+      padding: 1rem 0;
+      font-weight: 500;
+      color: var(--accent);
+    }
+    .gen-howto ol { margin: 0; padding-left: 1.25rem; color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+    .gen-howto li { margin-bottom: 0.5rem; }
+    .gen-howto a { color: var(--accent); }
+    .gen-howto code { background: var(--bg-input); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>AI Vision</h1>
+      <p class="subtitle">Обнаружение объектов и просмотр вариантов</p>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="detect">Обнаружение</button>
+      <button class="tab" data-tab="variants">Варианты</button>
+      <button class="tab" data-tab="generate">Генерация</button>
+    </div>
+
+    <div id="panel-detect" class="tab-panel active">
+    <div class="search-row">
+      <input type="text" id="objectInput" class="object-input" placeholder="Например: обувь, человек, собака, машина или по-английски..." autocomplete="off">
+      <p class="en-labels" id="enLabels"></p>
+    </div>
+
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="upload-content" id="uploadContent">
+        <div class="upload-icon">📷</div>
+        <p class="upload-text">Нажмите или перетащите изображение</p>
+        <p class="upload-hint">JPG, PNG, WebP</p>
+      </div>
+      <div class="preview-wrapper" id="previewWrapper" style="display: none;">
+        <img id="preview" alt="Предпросмотр">
+        <canvas id="canvas"></canvas>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-detect" id="detectBtn" disabled>Найти объект</button>
+      <button class="btn-masks" id="masksBtn" disabled>Маски (SegFormer)</button>
+      <button class="btn-clipseg" id="clipsegBtn" disabled>Маска по названию</button>
+      <button class="btn-clear" id="clearBtn">Очистить</button>
+    </div>
+
+    <p class="status" id="status"></p>
+
+    <div class="results-card" id="resultsCard" style="display: none;">
+      <h3 class="results-title">Обнаруженные объекты</h3>
+      <div class="results-list" id="resultsList"></div>
+    </div>
+    </div>
+
+    <div id="panel-variants" class="tab-panel">
+      <div class="variants-upload" id="variantsUpload">
+        <input type="file" id="variantsFileInput" accept=".json" style="display:none">
+        <div class="upload-icon">📁</div>
+        <p class="upload-text">Загрузите Variant.json</p>
+        <p class="upload-hint">или перетащите файл сюда</p>
+      </div>
+      <div class="variants-controls">
+        <label>Сортировка:</label>
+        <select id="variantsSort" class="variants-sort">
+          <option value="">По умолчанию</option>
+          <option value="ctr-asc">CTR ↑</option>
+          <option value="ctr-desc" selected>CTR ↓</option>
+        </select>
+      </div>
+      <div id="variantsGrid" class="variants-grid"></div>
+    </div>
+
+    <div id="panel-generate" class="tab-panel">
+      <details class="gen-howto">
+        <summary>Как получить URL прокси? (пошагово)</summary>
+        <ol>
+          <li>Зарегистрируйтесь на <a href="https://replicate.com" target="_blank" rel="noopener">replicate.com</a> и возьмите API-токен в <a href="https://replicate.com/account/api-tokens" target="_blank" rel="noopener">Account → API tokens</a>.</li>
+          <li>Зарегистрируйтесь на <a href="https://vercel.com" target="_blank" rel="noopener">vercel.com</a>, нажмите <strong>Add New… → Project</strong>.</li>
+          <li>Импортируйте проект: загрузите папку с этим сайтом (где лежат <code>index.html</code> и папка <code>api</code>) в GitHub, затем в Vercel выберите этот репозиторий. Либо нажмите <strong>Deploy</strong> и перетащите папку проекта в окно (Deploy without Git).</li>
+          <li>Перед деплоем откройте <strong>Settings → Environment Variables</strong>, добавьте переменную <code>REPLICATE_API_TOKEN</code> и вставьте токен из шага 1. Сохраните.</li>
+          <li>Нажмите <strong>Deploy</strong>. Дождитесь окончания (1–2 мин).</li>
+          <li>На странице проекта скопируйте адрес вида <strong>https://ваш-проект.vercel.app</strong>. В поле ниже вставьте: <strong>https://ваш-проект.vercel.app/api/generate</strong> (или просто <strong>https://ваш-проект.vercel.app</strong> — подставится само).</li>
+        </ol>
+      </details>
+      <div class="gen-section">
+        <label>URL прокси:</label>
+        <input type="url" id="genProxyUrl" class="gen-proxy-input" placeholder="https://ваш-проект.vercel.app или .../api/generate" autocomplete="off">
+      </div>
+      <div class="gen-section">
+        <label>Исходное фото:</label>
+        <div class="gen-upload" id="genUpload">
+          <input type="file" id="genFileInput" accept="image/*" style="display:none">
+          <div id="genUploadPlaceholder">
+            <div class="upload-icon">🖼️</div>
+            <p class="upload-text">Загрузите фото</p>
+          </div>
+          <img id="genPreview" alt="" style="display:none">
+        </div>
+      </div>
+      <div class="gen-section">
+        <label>Промпт (на английском лучше):</label>
+        <textarea id="genPrompt" class="gen-prompt-input" placeholder="например: same person in a forest, autumn lighting"></textarea>
+      </div>
+      <button type="button" class="btn-detect gen-btn" id="genBtn" disabled>Сгенерировать</button>
+      <p class="status" id="genStatus"></p>
+      <div id="genResultWrap" class="gen-result-wrap" style="display:none;">
+        <p style="color: var(--text-muted); margin-bottom: 0.5rem;">Результат:</p>
+        <img id="genResult" alt="Результат генерации">
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { pipeline, AutoTokenizer, AutoProcessor, AutoModelForImageSegmentation, RawImage } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.2.0';
+
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const objectInput = document.getElementById('objectInput');
+    const uploadContent = document.getElementById('uploadContent');
+    const previewWrapper = document.getElementById('previewWrapper');
+    const preview = document.getElementById('preview');
+    const canvas = document.getElementById('canvas');
+    const detectBtn = document.getElementById('detectBtn');
+    const masksBtn = document.getElementById('masksBtn');
+    const clipsegBtn = document.getElementById('clipsegBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const status = document.getElementById('status');
+    const resultsCard = document.getElementById('resultsCard');
+    const resultsList = document.getElementById('resultsList');
+    const enLabels = document.getElementById('enLabels');
+
+    let detector = null;
+    let segmenter = null;
+    let clipsegModel = null;
+    let clipsegProcessor = null;
+    let clipsegTokenizer = null;
+    let currentFile = null;
+
+    const MASK_COLORS = ['#7c5cff', '#34d399', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899'];
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Variants tab
+    const variantsUpload = document.getElementById('variantsUpload');
+    const variantsFileInput = document.getElementById('variantsFileInput');
+    const variantsSort = document.getElementById('variantsSort');
+    const variantsGrid = document.getElementById('variantsGrid');
+    const VARIANTS_BASE_URL = 'https://f6a3e4b5-e3d8-4b40-af8d-cb29edc59942.selstorage.ru/';
+
+    variantsUpload.addEventListener('click', () => variantsFileInput.click());
+
+    variantsUpload.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      variantsUpload.style.borderColor = 'var(--accent)';
+    });
+
+    variantsUpload.addEventListener('dragleave', () => {
+      variantsUpload.style.borderColor = '';
+    });
+
+    variantsUpload.addEventListener('drop', (e) => {
+      e.preventDefault();
+      variantsUpload.style.borderColor = '';
+      const file = e.dataTransfer?.files?.[0];
+      if (file?.name?.endsWith('.json')) handleVariantsFile(file);
+    });
+
+    variantsFileInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) handleVariantsFile(file);
+      e.target.value = '';
+    });
+
+    let variantsItems = [];
+
+    function getSortedVariants() {
+      const sort = variantsSort?.value || 'ctr-desc';
+      if (!sort || variantsItems.length === 0) return variantsItems;
+      const arr = [...variantsItems];
+      if (sort === 'ctr-asc') arr.sort((a, b) => (a.ctr ?? 0) - (b.ctr ?? 0));
+      if (sort === 'ctr-desc') arr.sort((a, b) => (b.ctr ?? 0) - (a.ctr ?? 0));
+      return arr;
+    }
+
+    function handleVariantsFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          variantsItems = Array.isArray(data) ? data : (data.items || data.data || []);
+          renderVariants(getSortedVariants());
+        } catch (err) {
+          alert('Ошибка чтения JSON: ' + err.message);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    variantsSort?.addEventListener('change', () => {
+      if (variantsItems.length) renderVariants(getSortedVariants());
+    });
+
+    // Generation tab
+    const genProxyUrl = document.getElementById('genProxyUrl');
+    const genUpload = document.getElementById('genUpload');
+    const genFileInput = document.getElementById('genFileInput');
+    const genUploadPlaceholder = document.getElementById('genUploadPlaceholder');
+    const genPreview = document.getElementById('genPreview');
+    const genPrompt = document.getElementById('genPrompt');
+    const genBtn = document.getElementById('genBtn');
+    const genStatus = document.getElementById('genStatus');
+    const genResultWrap = document.getElementById('genResultWrap');
+    const genResult = document.getElementById('genResult');
+
+    let genImageDataUrl = null;
+
+    genUpload.addEventListener('click', () => genFileInput.click());
+    genFileInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        genImageDataUrl = reader.result;
+        genPreview.src = genImageDataUrl;
+        genPreview.style.display = 'block';
+        genUploadPlaceholder.style.display = 'none';
+        genUpload.classList.add('has-image');
+        updateGenBtn();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function updateGenBtn() {
+      const hasProxy = (genProxyUrl?.value || '').trim().length > 0;
+      genBtn.disabled = !hasProxy || !genImageDataUrl || !(genPrompt?.value || '').trim();
+    }
+    genProxyUrl?.addEventListener('input', updateGenBtn);
+    genPrompt?.addEventListener('input', updateGenBtn);
+
+    genBtn?.addEventListener('click', async () => {
+      const base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
+      if (!base || !genImageDataUrl || !(genPrompt?.value || '').trim()) return;
+      const url = base + (base.endsWith('/api/generate') ? '' : '/api/generate');
+      genStatus.textContent = 'Генерация...';
+      genResultWrap.style.display = 'none';
+      genBtn.disabled = true;
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: genPrompt.value.trim(), image: genImageDataUrl })
+        });
+        if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+        const data = await res.json();
+        const imageUrl = data.image_url ?? data.output?.[0] ?? data.url;
+        if (imageUrl) {
+          genResult.src = imageUrl;
+          genResultWrap.style.display = 'block';
+          genStatus.textContent = '';
+        } else {
+          genStatus.textContent = 'В ответе нет URL изображения';
+        }
+      } catch (err) {
+        genStatus.textContent = 'Ошибка: ' + err.message;
+      }
+      genBtn.disabled = false;
+      updateGenBtn();
+    });
+
+    function renderVariants(items) {
+      variantsGrid.innerHTML = items.map(item => {
+        const src = item.photo_path ? VARIANTS_BASE_URL + item.photo_path : '';
+        const ctr = item.ctr != null ? item.ctr.toFixed(2) : '—';
+        const views = item.views != null ? String(item.views) : '—';
+        const abtest = item.abtest_id != null ? String(item.abtest_id) : '—';
+        return `<div class="variant-card">
+          <img src="${src}" alt="" loading="lazy" onerror="this.src='';this.alt='Нет фото'">
+          <div class="variant-badges">
+            <span class="variant-badge ctr">ctr: ${ctr}</span>
+            <span class="variant-badge views">views: ${views}</span>
+            <span class="variant-badge abtest">abtest_id: ${abtest}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) handleFile(file);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    objectInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') detect();
+    });
+
+    function handleFile(file) {
+      currentFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.src = e.target.result;
+        uploadContent.style.display = 'none';
+        previewWrapper.style.display = 'block';
+        uploadZone.classList.add('has-image');
+        detectBtn.disabled = false;
+        masksBtn.disabled = false;
+        clipsegBtn.disabled = false;
+        resultsCard.style.display = 'none';
+        clearCanvas();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setStatus(text, type = '') {
+      status.textContent = text;
+      status.className = 'status' + (type ? ` ${type}` : '');
+    }
+
+    function clearCanvas() {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    const MYMEMORY_URL = 'https://api.mymemory.translated.net/get';
+
+    async function checkMyMemory() {
+      try {
+        const res = await fetch(`${MYMEMORY_URL}?q=${encodeURIComponent('тест')}&langpair=ru|en`);
+        const data = await res.json();
+        const out = data?.responseData?.translatedText;
+        const ok = out && !/[а-яё]/i.test(out);
+        console.log('MyMemory:', ok ? 'OK — ' + out : 'FAIL — ' + JSON.stringify(data));
+        return ok;
+      } catch (e) {
+        console.log('MyMemory:', 'ERROR —', e.message);
+        return false;
+      }
+    }
+
+    async function translateRuToEn(text) {
+      if (!/[а-яё]/i.test(text)) return text;
+      const res = await fetch(`${MYMEMORY_URL}?q=${encodeURIComponent(text)}&langpair=ru|en`);
+      const data = await res.json();
+      const out = data?.responseData?.translatedText || text;
+      if (/[а-яё]/i.test(out)) throw new Error('Перевод не выполнен: ответ на русском');
+      return out;
+    }
+
+    function toModelLabels(s, display) {
+      const w = s.replace(/\s+/g, ' ').trim().toLowerCase();
+      if (!/^[a-z\s-]+$/.test(w)) return { labels: [w], display: { [w]: display } };
+      const singular = w.endsWith('s') && w.length > 2 ? 'a ' + w.slice(0, -1) : null;
+      const withA = !w.includes(' ') && !w.endsWith('s') ? 'a ' + w : null;
+      const labels = [...new Set([singular, withA, w].filter(Boolean))];
+      const disp = {};
+      labels.forEach(l => { disp[l] = display; });
+      return { labels, display: disp };
+    }
+
+    async function formatLabels(text) {
+      const raw = text.trim().split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+      const hasRu = raw.some(s => /[а-яё]/i.test(s));
+      let enRaw = raw;
+      if (hasRu) {
+        const translated = await translateRuToEn(raw.join(', '));
+        enRaw = translated.split(/[,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+        if (enRaw.length !== raw.length) enRaw = [translated.toLowerCase()];
+      } else {
+        enRaw = raw.map(s => s.toLowerCase());
+      }
+      let forModel = [];
+      const forDisplay = {};
+      enRaw.forEach((en, i) => {
+        const { labels, display } = toModelLabels(en, raw[i] || en);
+        forModel = forModel.concat(labels);
+        Object.assign(forDisplay, display);
+      });
+      forModel = [...new Set(forModel)];
+      return { forModel, forDisplay };
+    }
+
+    async function loadCLIPSeg() {
+      if (clipsegModel) return { model: clipsegModel, processor: clipsegProcessor, tokenizer: clipsegTokenizer };
+      setStatus('Загрузка CLIPSeg (~160 МБ)...', 'loading');
+      [clipsegTokenizer, clipsegProcessor, clipsegModel] = await Promise.all([
+        AutoTokenizer.from_pretrained('Xenova/clipseg-rd64'),
+        AutoProcessor.from_pretrained('Xenova/clipseg-rd64'),
+        AutoModelForImageSegmentation.from_pretrained('Xenova/clipseg-rd64')
+      ]);
+      return { model: clipsegModel, processor: clipsegProcessor, tokenizer: clipsegTokenizer };
+    }
+
+    async function runCLIPSeg() {
+      const query = objectInput.value.trim();
+      if (!query) {
+        setStatus('Введите название объекта.');
+        return;
+      }
+      if (!preview.src || preview.src === window.location.href) {
+        setStatus('Загрузите изображение.');
+        return;
+      }
+      if (/[а-яё]/i.test(query)) setStatus('Перевод...', 'loading');
+      const { forModel: labels } = await formatLabels(query);
+      enLabels.textContent = labels.length ? 'Маска для: ' + labels.join(', ') : '';
+      if (!labels.length) return;
+      clipsegBtn.disabled = true;
+      setStatus('Маска по названию...', 'loading');
+      try {
+        const { model, processor, tokenizer } = await loadCLIPSeg();
+        const image = await RawImage.read(preview.src);
+        const textInputs = tokenizer(labels, { padding: true, truncation: true });
+        const imageInputs = await processor(image);
+        const out = await model({ ...textInputs, ...imageInputs });
+        const logits = out.logits || out;
+        let preds = logits;
+        if (typeof logits.sigmoid === 'function') preds = logits.sigmoid();
+        else preds = { data: Array.from(logits.data).map(v => 1 / (1 + Math.exp(-v))), dims: logits.dims };
+        if (typeof preds.mul === 'function') preds = preds.mul(255).round();
+        else preds = { data: preds.data.map(v => Math.round(Math.min(255, Math.max(0, v * 255)))), dims: preds.dims };
+        const rect = preview.getBoundingClientRect();
+        const dispW = Math.round(rect.width);
+        const dispH = Math.round(rect.height);
+        const dims = preds.dims || preds.size || [1, 352, 352];
+        const maskH = dims[1] || 352;
+        const maskW = dims[2] || 352;
+        const data = Array.isArray(preds.data) ? preds.data : (preds.data ? Array.from(preds.data) : []);
+        canvas.width = dispW;
+        canvas.height = dispH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(preview, 0, 0, dispW, dispH);
+        const imgData = ctx.getImageData(0, 0, dispW, dispH);
+        const r = 124, g = 92, b = 255;
+        const blend = 0.5;
+        for (let y = 0; y < dispH; y++) {
+          for (let x = 0; x < dispW; x++) {
+            const sx = Math.min(Math.floor(x * maskW / dispW), maskW - 1);
+            const sy = Math.min(Math.floor(y * maskH / dispH), maskH - 1);
+            let v = 0;
+            const nT = dims[0] || 1;
+            for (let t = 0; t < nT; t++) {
+              const idx = t * maskH * maskW + sy * maskW + sx;
+              v = Math.max(v, data[idx] ?? 0);
+            }
+            if (v > 128) {
+              const i = (y * dispW + x) * 4;
+              imgData.data[i] = imgData.data[i] * (1 - blend) + r * blend;
+              imgData.data[i + 1] = imgData.data[i + 1] * (1 - blend) + g * blend;
+              imgData.data[i + 2] = imgData.data[i + 2] * (1 - blend) + b * blend;
+            }
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        resultsCard.style.display = 'block';
+        resultsList.innerHTML = labels.map(l => `
+          <div class="result-item">
+            <span class="result-class">${l}</span>
+            <span style="width:12px;height:12px;border-radius:2px;background:#7c5cff"></span>
+          </div>
+        `).join('');
+        setStatus('Маска по названию построена', 'success');
+      } catch (err) {
+        setStatus('Ошибка: ' + err.message);
+        console.error(err);
+      }
+      clipsegBtn.disabled = false;
+    }
+
+    async function loadSegmenter() {
+      if (segmenter) return segmenter;
+      setStatus('Загрузка SegFormer (~50 МБ)...', 'loading');
+      segmenter = await pipeline('image-segmentation', 'Xenova/segformer-b0-finetuned-ade-512-512', { dtype: 'q8' });
+      return segmenter;
+    }
+
+    async function runMasks() {
+      if (!preview.src || preview.src === window.location.href) {
+        setStatus('Сначала загрузите изображение.');
+        return;
+      }
+      const seg = await loadSegmenter();
+      setStatus('Сегментация...', 'loading');
+      masksBtn.disabled = true;
+      try {
+        const output = await seg(preview.src);
+        const rect = preview.getBoundingClientRect();
+        const dispW = Math.round(rect.width);
+        const dispH = Math.round(rect.height);
+        canvas.width = dispW;
+        canvas.height = dispH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(preview, 0, 0, dispW, dispH);
+        const imgData = ctx.getImageData(0, 0, dispW, dispH);
+        const topMasks = output.slice(0, 7);
+        topMasks.forEach((item, idx) => {
+          if (!item.mask) return;
+          const m = item.mask;
+          const w = m.width ?? m.size?.[0] ?? 512;
+          const h = m.height ?? m.size?.[1] ?? 512;
+          const d = m.data;
+          if (!d || d.length === 0) return;
+          const hex = MASK_COLORS[idx].replace('#', '');
+          const r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+          const scaleX = w / dispW, scaleY = h / dispH;
+          const ch = d.length / (w * h);
+          const blend = 0.5;
+          for (let y = 0; y < dispH; y++) {
+            for (let x = 0; x < dispW; x++) {
+              const sx = Math.min(Math.floor(x * scaleX), w - 1);
+              const sy = Math.min(Math.floor(y * scaleY), h - 1);
+              const vi = ch <= 1 ? sy * w + sx : (sy * w + sx) * ch;
+              const v = d[Math.min(Math.floor(vi), d.length - 1)];
+              const i = (y * dispW + x) * 4;
+              if (v > 128) {
+                imgData.data[i] = imgData.data[i] * (1 - blend) + r * blend;
+                imgData.data[i + 1] = imgData.data[i + 1] * (1 - blend) + g * blend;
+                imgData.data[i + 2] = imgData.data[i + 2] * (1 - blend) + b * blend;
+              }
+            }
+          }
+        });
+        ctx.putImageData(imgData, 0, 0);
+        resultsCard.style.display = 'block';
+        resultsList.innerHTML = topMasks.map((o, i) => `
+          <div class="result-item">
+            <span class="result-class">${o.label}</span>
+            <span style="width:12px;height:12px;border-radius:2px;background:${MASK_COLORS[i]}"></span>
+          </div>
+        `).join('');
+        setStatus(`Сегментов: ${output.length}`, 'success');
+      } catch (err) {
+        setStatus('Ошибка: ' + err.message);
+      }
+      masksBtn.disabled = false;
+    }
+
+    async function loadDetector() {
+      if (detector) return detector;
+      setStatus('Загрузка модели OWL-ViT (~180 МБ)...', 'loading');
+      try {
+        detector = await pipeline('zero-shot-object-detection', 'Xenova/owlvit-base-patch32', { dtype: 'q8' });
+        setStatus('Модель загружена. Загрузите изображение и введите объект для поиска.');
+        return detector;
+      } catch (err) {
+        setStatus('Ошибка загрузки: ' + err.message);
+        detector = null;
+        throw err;
+      }
+    }
+
+    async function detect() {
+      const query = objectInput.value.trim();
+      if (!query) {
+        setStatus('Введите название объекта для поиска.');
+        return;
+      }
+      if (!preview.src || preview.src === window.location.href || !currentFile) {
+        setStatus('Сначала загрузите изображение.');
+        return;
+      }
+
+      const d = await loadDetector();
+      detectBtn.disabled = true;
+
+      try {
+        if (/[а-яё]/i.test(query)) setStatus('Перевод через MyMemory...', 'loading');
+        const { forModel: labels, forDisplay } = await formatLabels(query);
+        enLabels.textContent = labels.length ? 'Ищем на англ.: ' + labels.join(', ') : '';
+        setStatus('Поиск объектов...', 'loading');
+        if (!labels.length) {
+          setStatus('Введите название объекта для поиска.');
+          detectBtn.disabled = false;
+          return;
+        }
+        const output = await d(preview.src, labels, { threshold: 0.12, top_k: 15 });
+
+        const rect = preview.getBoundingClientRect();
+        const dispW = Math.round(rect.width);
+        const dispH = Math.round(rect.height);
+        const natW = preview.naturalWidth;
+        const natH = preview.naturalHeight;
+        const scaleX = natW / dispW;
+        const scaleY = natH / dispH;
+
+        canvas.width = dispW;
+        canvas.height = dispH;
+        canvas.style.width = dispW + 'px';
+        canvas.style.height = dispH + 'px';
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        output.forEach((p, idx) => {
+          const { xmin, ymin, xmax, ymax } = p.box;
+          const boxW = xmax - xmin;
+          const boxH = ymax - ymin;
+          const pctW = (boxW / natW * 100).toFixed(1);
+          const pctH = (boxH / natH * 100).toFixed(1);
+          const pctArea = (boxW * boxH / (natW * natH) * 100).toFixed(1);
+          p._size = { pctW, pctH, pctArea };
+
+          let sx = xmin / scaleX;
+          let sy = ymin / scaleY;
+          let sw = boxW / scaleX;
+          let sh = boxH / scaleY;
+          sx = Math.max(0, Math.min(sx, dispW - 2));
+          sy = Math.max(0, Math.min(sy, dispH - 2));
+          sw = Math.min(sw, dispW - sx);
+          sh = Math.min(sh, dispH - sy);
+          if (sw <= 0 || sh <= 0) return;
+
+          const isBest = idx === 0;
+          const boxColor = isBest ? '#34d399' : '#7c5cff';
+          ctx.strokeStyle = boxColor;
+          ctx.lineWidth = isBest ? 3 : 2;
+          ctx.strokeRect(sx, sy, sw, sh);
+
+          ctx.fillStyle = boxColor;
+          ctx.font = '12px Outfit, sans-serif';
+          const displayLabel = forDisplay[p.label] || p.label;
+          const label = `${displayLabel} ${(p.score * 100).toFixed(0)}% · ${pctArea}% кадра`;
+          const textWidth = ctx.measureText(label).width;
+          ctx.fillRect(sx, sy - 20, textWidth + 8, 20);
+          ctx.fillStyle = 'white';
+          ctx.fillText(label, sx + 4, sy - 6);
+        });
+
+        resultsList.innerHTML = output.map((p, idx) => {
+          const s = p._size || { pctW: '-', pctH: '-', pctArea: '-' };
+          const isBest = idx === 0;
+          return `
+          <div class="result-item${isBest ? ' result-item-best' : ''}">
+            <div>
+              <span class="result-class">${forDisplay[p.label] || p.label}${isBest ? ' ✓ лучший' : ''}</span>
+              <div class="result-size">${s.pctW}% × ${s.pctH}% кадра, ${s.pctArea}% площади</div>
+            </div>
+            <span class="result-confidence">${(p.score * 100).toFixed(1)}%</span>
+          </div>
+        `;
+        }).join('');
+
+        resultsCard.style.display = 'block';
+        setStatus(`Найдено: ${output.length}`, 'success');
+      } catch (err) {
+        setStatus('Ошибка: ' + err.message);
+      }
+
+      detectBtn.disabled = false;
+    }
+
+    function clear() {
+      fileInput.value = '';
+      currentFile = null;
+      objectInput.value = '';
+      enLabels.textContent = '';
+      preview.src = '';
+      uploadContent.style.display = 'block';
+      previewWrapper.style.display = 'none';
+      uploadZone.classList.remove('has-image');
+      detectBtn.disabled = true;
+      masksBtn.disabled = true;
+      clipsegBtn.disabled = true;
+      resultsCard.style.display = 'none';
+      resultsList.innerHTML = '';
+      clearCanvas();
+      setStatus('');
+    }
+
+    detectBtn.addEventListener('click', detect);
+    masksBtn.addEventListener('click', runMasks);
+    clipsegBtn.addEventListener('click', runCLIPSeg);
+    clearBtn.addEventListener('click', clear);
+
+    checkMyMemory().then(ok => {
+      if (ok) setStatus('MyMemory: доступен');
+      else setStatus('MyMemory: недоступен (см. консоль F12)');
+    });
+  </script>
+</body>
+</html>
