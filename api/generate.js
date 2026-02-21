@@ -36,7 +36,7 @@ export default async function handler(req, res) {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'Prefer': 'wait=120',
+        'Prefer': 'wait=60',
       },
       body: JSON.stringify({
         version: '59d24cdf87eb2bf20757d7072c5718750d76ecdcc87851e0e2ca5bac92cef21d',
