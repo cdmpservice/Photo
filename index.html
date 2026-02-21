@@ -567,6 +567,7 @@
     .gen-analyze-result { margin-top: 0.5rem; }
     .gen-analyze-result textarea { background: var(--bg-input); border: 2px solid var(--bg-card); }
     .gen-analyze-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .gen-analyze-settings-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
   </style>
 </head>
 <body>
@@ -580,6 +581,7 @@
       <button class="tab active" data-tab="detect">Обнаружение</button>
       <button class="tab" data-tab="variants">Варианты</button>
       <button class="tab" data-tab="generate">Генерация</button>
+      <button class="tab" data-tab="analyze-settings">Настройки анализа</button>
     </div>
 
     <div id="panel-detect" class="tab-panel active">
@@ -632,6 +634,18 @@
         </select>
       </div>
       <div id="variantsGrid" class="variants-grid"></div>
+    </div>
+
+    <div id="panel-analyze-settings" class="tab-panel">
+      <div class="gen-section">
+        <label>Системный промпт для GPT-анализа</label>
+        <p class="gen-setting-hint" style="margin-bottom: 0.5rem;">Инструкция для GPT: что описывать в фото (ракурс, крупность плана, типаж, интерьер и т.д.). Результат — текстовый промпт на английском.</p>
+        <textarea id="analyzeSystemPrompt" class="gen-prompt-input" rows="14" placeholder="Системный промпт..."></textarea>
+        <div class="gen-analyze-settings-actions">
+          <button type="button" class="btn-secondary" id="analyzePromptReset">Сбросить к умолчанию</button>
+          <button type="button" class="btn-secondary" id="analyzePromptSave">Сохранить</button>
+        </div>
+      </div>
     </div>
 
     <div id="panel-generate" class="tab-panel">
@@ -805,6 +819,51 @@
         document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
       });
     });
+
+    const DEFAULT_ANALYZE_PROMPT = `You are an expert at describing photos for image-to-image AI prompts. Analyze the image and write a detailed English prompt suitable for img2img generation. MUST include:
+
+1. CAMERA ANGLE / SHOOTING PERSPECTIVE — from which angle the shot is taken (eye level, low angle, high angle, dutch angle, frontal, 3/4 view, etc.)
+2. SHOT SCALE / FRAMING — крупность плана: extreme close-up, close-up, medium close-up, medium shot, medium full shot, full shot, long shot, etc.
+3. MODEL TYPE — тип модели: age range, build, skin tone, hair (color, length, style), facial features, gender if visible
+4. POSE AND BODY POSITION — detailed description of pose, body orientation, hand/arm placement, posture
+5. INTERIOR / ENVIRONMENT — максимально детально: walls, furniture, décor, materials, colors, textures, objects in frame, spatial layout, style (minimalist, modern, vintage, etc.), atmosphere
+6. LIGHTING — direction, quality (soft/hard), source (natural/window/artificial), time of day feel, shadows, highlights
+7. STYLE AND MOOD — overall aesthetic, mood
+
+Output ONLY the prompt text in English, no explanations. Be very detailed, especially for interior and model description. Use 2-5 descriptive sentences.`;
+
+    const analyzeSystemPromptEl = document.getElementById('analyzeSystemPrompt');
+    const analyzePromptResetBtn = document.getElementById('analyzePromptReset');
+    const analyzePromptSaveBtn = document.getElementById('analyzePromptSave');
+
+    try {
+      const saved = localStorage.getItem('ai-vision-analyze-prompt');
+      if (saved) analyzeSystemPromptEl.value = saved;
+      else analyzeSystemPromptEl.value = DEFAULT_ANALYZE_PROMPT;
+    } catch (_) {
+      analyzeSystemPromptEl.value = DEFAULT_ANALYZE_PROMPT;
+    }
+
+    analyzePromptResetBtn?.addEventListener('click', () => {
+      analyzeSystemPromptEl.value = DEFAULT_ANALYZE_PROMPT;
+    });
+
+    analyzePromptSaveBtn?.addEventListener('click', () => {
+      try {
+        localStorage.setItem('ai-vision-analyze-prompt', analyzeSystemPromptEl.value || '');
+      } catch (_) {}
+    });
+
+    analyzeSystemPromptEl?.addEventListener('blur', () => {
+      try {
+        localStorage.setItem('ai-vision-analyze-prompt', analyzeSystemPromptEl.value || '');
+      } catch (_) {}
+    });
+
+    function getAnalyzeSystemPrompt() {
+      const v = (analyzeSystemPromptEl?.value || '').trim();
+      return v || DEFAULT_ANALYZE_PROMPT;
+    }
 
     // Variants tab
     const variantsUpload = document.getElementById('variantsUpload');
@@ -1182,10 +1241,19 @@
         const res = await fetch(analyzeUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: genAnalyzeImageDataUrl }),
+          body: JSON.stringify({
+            image: genAnalyzeImageDataUrl,
+            system_prompt: getAnalyzeSystemPrompt()
+          }),
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || res.statusText || 'Ошибка анализа');
+        if (!res.ok) {
+          const msg = data.error || res.statusText || 'Ошибка анализа';
+          if (/sensitive|E005/i.test(msg)) {
+            throw new Error('OpenAI отклонил изображение (модерация). Попробуйте другое фото.');
+          }
+          throw new Error(msg);
+        }
         const prompt = data.prompt || '';
         genAnalyzedPrompt.value = prompt;
         genAnalyzeResult.style.display = 'block';

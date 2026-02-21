@@ -3,14 +3,17 @@
 
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 
-const SYSTEM_PROMPT = `You are an expert at describing photos for image-to-image AI prompts. Analyze the image and write a detailed English prompt suitable for img2img generation. Include:
-- Background and environment (location, objects, atmosphere)
-- Subject pose and position (body position, orientation, composition)
-- Lighting (direction, quality, time of day, shadows)
-- Style and mood
-- Any notable details (clothing, expressions, etc.)
+const SYSTEM_PROMPT = `You are an expert at describing photos for image-to-image AI prompts. Analyze the image and write a detailed English prompt suitable for img2img generation. MUST include:
 
-Output ONLY the prompt text, no explanations. Keep it concise but descriptive (1-3 sentences).`;
+1. CAMERA ANGLE / SHOOTING PERSPECTIVE — from which angle the shot is taken (eye level, low angle, high angle, dutch angle, frontal, 3/4 view, etc.)
+2. SHOT SCALE / FRAMING — крупность плана: extreme close-up, close-up, medium close-up, medium shot, medium full shot, full shot, long shot, etc.
+3. MODEL TYPE — тип модели: age range, build, skin tone, hair (color, length, style), facial features, gender if visible
+4. POSE AND BODY POSITION — detailed description of pose, body orientation, hand/arm placement, posture
+5. INTERIOR / ENVIRONMENT — максимально детально: walls, furniture, décor, materials, colors, textures, objects in frame, spatial layout, style (minimalist, modern, vintage, etc.), atmosphere
+6. LIGHTING — direction, quality (soft/hard), source (natural/window/artificial), time of day feel, shadows, highlights
+7. STYLE AND MOOD — overall aesthetic, mood
+
+Output ONLY the prompt text in English, no explanations. Be very detailed, especially for interior and model description. Use 2-5 descriptive sentences.`;
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
@@ -25,11 +28,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { image: imageDataUrl } = req.body || {};
+  const { image: imageDataUrl, system_prompt: customSystemPrompt } = req.body || {};
   if (!imageDataUrl || typeof imageDataUrl !== 'string') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(400).json({ error: 'Need image (data URL)' });
   }
+  const systemPrompt = (typeof customSystemPrompt === 'string' && customSystemPrompt.trim())
+    ? customSystemPrompt.trim()
+    : SYSTEM_PROMPT;
 
   const token = process.env.OPENAI_API_KEY;
   if (!token) {
@@ -48,7 +54,7 @@ export default async function handler(req, res) {
         model: 'gpt-4o',
         max_tokens: 500,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           {
             role: 'user',
             content: [
