@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Flux img2img (bxclib2/flux_img2img). image — URL или data URI.
+    // Replicate принимает data URI только для файлов < 1MB; большие изображения дают 422.
     const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {

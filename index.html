@@ -657,12 +657,35 @@
     let genImageDataUrl = null;
 
     genUpload.addEventListener('click', () => genFileInput.click());
-    genFileInput.addEventListener('change', (e) => {
+    function compressImageForReplicate(dataUrl, maxSize = 1024, quality = 0.82) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > maxSize || h > maxSize) {
+            if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+            else { w = Math.round(w * maxSize / h); h = maxSize; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const out = canvas.toDataURL('image/jpeg', quality);
+          resolve(out);
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+      });
+    }
+
+    genFileInput.addEventListener('change', async (e) => {
       const file = e.target.files?.[0];
       if (!file || !file.type.startsWith('image/')) return;
       const reader = new FileReader();
-      reader.onload = () => {
-        genImageDataUrl = reader.result;
+      reader.onload = async () => {
+        const raw = reader.result;
+        genImageDataUrl = await compressImageForReplicate(raw);
         genPreview.src = genImageDataUrl;
         genPreview.style.display = 'block';
         genUploadPlaceholder.style.display = 'none';
@@ -680,8 +703,9 @@
     genPrompt?.addEventListener('input', updateGenBtn);
 
     genBtn?.addEventListener('click', async () => {
-      const base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
+      let base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
       if (!base || !genImageDataUrl || !(genPrompt?.value || '').trim()) return;
+      if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
       const url = base + (base.endsWith('/api/generate') ? '' : '/api/generate');
       genStatus.textContent = 'Генерация...';
       genResultWrap.style.display = 'none';
@@ -692,8 +716,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: genPrompt.value.trim(), image: genImageDataUrl })
         });
-        if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = data.error || res.statusText || res.status;
+          throw new Error(res.status + ' — ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)));
+        }
         const imageUrl = data.image_url ?? data.output?.[0] ?? data.url;
         if (imageUrl) {
           genResult.src = imageUrl;
