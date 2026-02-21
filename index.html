@@ -438,6 +438,43 @@
       margin-bottom: 1.5rem;
       align-items: stretch;
     }
+    .gen-images-row-3 .gen-image-slot { flex: 1; }
+    .gen-analyze-slot {
+      min-height: 280px;
+      border: 2px dashed var(--bg-input);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .gen-analyze-slot.has-image { border-style: solid; border-color: var(--bg-card); }
+    .gen-slot-placeholder {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      padding: 1rem;
+      text-align: center;
+    }
+    .gen-analyze-slot img {
+      width: 100%;
+      max-height: 340px;
+      object-fit: contain;
+      flex: 1;
+    }
+    .gen-use-source-btn {
+      margin: 0.5rem;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .gen-use-source-btn:hover { background: var(--accent-hover); }
     .gen-image-slot {
       flex: 1;
       min-width: 0;
@@ -621,9 +658,17 @@
         </div>
         <div id="genVariantsGrid" class="gen-variants-grid"></div>
       </details>
-      <div class="gen-images-row">
+      <div class="gen-images-row gen-images-row-3">
         <div class="gen-image-slot">
-          <label>Исходное фото:</label>
+          <label>Для анализа:</label>
+          <div class="gen-analyze-slot" id="genAnalyzeSlot">
+            <div id="genAnalyzePlaceholder" class="gen-slot-placeholder">Выберите фото из вариантов</div>
+            <img id="genAnalyzePreview" alt="" style="display:none">
+            <button type="button" class="gen-use-source-btn" id="genUseAsSourceBtn" style="display:none">→ Исходник</button>
+          </div>
+        </div>
+        <div class="gen-image-slot">
+          <label>Исходник:</label>
           <div class="gen-upload" id="genUpload">
             <input type="file" id="genFileInput" accept="image/*" style="display:none">
             <div id="genUploadPlaceholder">
@@ -634,7 +679,7 @@
           </div>
         </div>
         <div class="gen-image-slot">
-          <label>Результат:</label>
+          <label>Генерация:</label>
           <div id="genResultWrap" class="gen-result-wrap" style="display:none;">
             <div class="gen-result-inner">
               <img id="genResult" alt="Результат генерации">
@@ -929,9 +974,14 @@
     const genAnalyzeResult = document.getElementById('genAnalyzeResult');
     const genAnalyzeCopy = document.getElementById('genAnalyzeCopy');
     const genAnalyzeInsert = document.getElementById('genAnalyzeInsert');
+    const genAnalyzePreview = document.getElementById('genAnalyzePreview');
+    const genAnalyzePlaceholder = document.getElementById('genAnalyzePlaceholder');
+    const genAnalyzeSlot = document.getElementById('genAnalyzeSlot');
+    const genUseAsSourceBtn = document.getElementById('genUseAsSourceBtn');
 
     let genImageDataUrl = null;
     let genSourceWidth = 0, genSourceHeight = 0;
+    let genAnalyzeImageDataUrl = null;
 
     genUpload.addEventListener('click', () => genFileInput.click());
     function compressImageForReplicate(dataUrl, maxSize = 1440, quality = 0.82) {
@@ -979,7 +1029,7 @@
     function updateGenBtn() {
       const hasProxy = (genProxyUrl?.value || '').trim().length > 0;
       genBtn.disabled = !hasProxy || !genImageDataUrl || !(genPrompt?.value || '').trim();
-      if (genAnalyzeBtn) genAnalyzeBtn.disabled = !genImageDataUrl;
+      if (genAnalyzeBtn) genAnalyzeBtn.disabled = !genAnalyzeImageDataUrl;
     }
     genProxyUrl?.addEventListener('input', updateGenBtn);
     genPrompt?.addEventListener('input', updateGenBtn);
@@ -988,18 +1038,17 @@
       const thumb = e.target.closest('.gen-variant-thumb');
       if (!thumb || !thumb.dataset.src) return;
       const imageUrl = thumb.dataset.src.trim();
-      genPreview.src = imageUrl;
-      genPreview.style.display = 'block';
-      genUploadPlaceholder.style.display = 'none';
-      genUpload.classList.add('has-image');
+      genAnalyzePreview.src = imageUrl;
+      genAnalyzePreview.style.display = 'block';
+      genAnalyzePlaceholder.style.display = 'none';
+      genAnalyzeSlot?.classList.add('has-image');
+      genUseAsSourceBtn.style.display = 'block';
       genVariantsGrid?.querySelectorAll('.gen-variant-thumb.selected').forEach(el => el.classList.remove('selected'));
       thumb.classList.add('selected');
       try {
         if (imageUrl.startsWith('data:')) {
           const r = await compressImageForReplicate(imageUrl, 99999);
-          genImageDataUrl = r.dataUrl;
-          genSourceWidth = r.width;
-          genSourceHeight = r.height;
+          genAnalyzeImageDataUrl = r.dataUrl;
         } else {
           let blob;
           try {
@@ -1019,16 +1068,29 @@
             reader.readAsDataURL(blob);
           });
           const r = await compressImageForReplicate(rawDataUrl);
-          genImageDataUrl = r.dataUrl;
-          genSourceWidth = r.width;
-          genSourceHeight = r.height;
+          genAnalyzeImageDataUrl = r.dataUrl;
         }
       } catch (err) {
         alert('Не удалось загрузить фото: ' + (err.message || err));
-        genImageDataUrl = null;
-        genSourceWidth = 0;
-        genSourceHeight = 0;
+        genAnalyzeImageDataUrl = null;
+        genAnalyzePreview.style.display = 'none';
+        genAnalyzePlaceholder.style.display = 'block';
+        genAnalyzeSlot?.classList.remove('has-image');
+        genUseAsSourceBtn.style.display = 'none';
       }
+      updateGenBtn();
+    });
+
+    genUseAsSourceBtn?.addEventListener('click', async () => {
+      if (!genAnalyzeImageDataUrl) return;
+      genImageDataUrl = genAnalyzeImageDataUrl;
+      const r = await compressImageForReplicate(genAnalyzeImageDataUrl, 99999);
+      genSourceWidth = r.width;
+      genSourceHeight = r.height;
+      genPreview.src = genImageDataUrl;
+      genPreview.style.display = 'block';
+      genUploadPlaceholder.style.display = 'none';
+      genUpload.classList.add('has-image');
       updateGenBtn();
     });
 
@@ -1108,7 +1170,7 @@
     });
 
     genAnalyzeBtn?.addEventListener('click', async () => {
-      if (!genImageDataUrl) return;
+      if (!genAnalyzeImageDataUrl) return;
       let base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
       if (!base) { alert('Укажите URL прокси в поле выше'); genAnalyzeBtn.disabled = false; genAnalyzeBtn.textContent = 'Анализировать через GPT'; return; }
       if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
@@ -1120,7 +1182,7 @@
         const res = await fetch(analyzeUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: genImageDataUrl }),
+          body: JSON.stringify({ image: genAnalyzeImageDataUrl }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || res.statusText || 'Ошибка анализа');
