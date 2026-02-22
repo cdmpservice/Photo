@@ -7,7 +7,8 @@
 1. Залейте проект в GitHub и подключите к [Vercel](https://vercel.com).
 2. В настройках проекта → Environment Variables добавьте:
    - `REPLICATE_API_TOKEN` = ваш токен с [replicate.com/account](https://replicate.com/account).
-   - `OPENAI_API_KEY` = ваш токен с [platform.openai.com](https://platform.openai.com/api-keys) — для анализа фото через GPT Vision (генерация промпта).
+   - `OPENAI_API_KEY` = ваш токен с [platform.openai.com](https://platform.openai.com/api-keys) — для анализа фото через GPT Vision.
+   - `GEMINI_API_KEY` = ваш токен с [aistudio.google.com/apikey](https://aistudio.google.com/apikey) — опционально, для анализа через Gemini Vision (переключатель в интерфейсе).
 3. Деплой. URL будет вида `https://ваш-проект.vercel.app`.
 4. Во вкладке «Генерация» укажите URL прокси: `https://ваш-проект.vercel.app/api/generate` (или просто `https://ваш-проект.vercel.app`).
 

@@ -564,6 +564,8 @@
     .btn-secondary:hover { border-color: var(--accent); background: var(--bg-card); }
 
     .gen-analyze-section { margin-bottom: 1.5rem; }
+    .gen-analyze-provider-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .gen-analyze-provider-row label { margin: 0; }
     .gen-analyze-section .gen-analyze-btn { margin-bottom: 0.75rem; }
     .gen-analyze-result { margin-top: 0.5rem; }
     .gen-analyze-result textarea { background: var(--bg-input); border: 2px solid var(--bg-card); }
@@ -774,12 +776,20 @@
         </div>
       </div>
       <div class="gen-section gen-analyze-section">
-        <label>Промпт из GPT (анализ фото):</label>
-        <button type="button" class="btn-secondary gen-analyze-btn" id="genAnalyzeBtn" disabled>Анализировать через GPT</button>
+        <label>Анализ фото (Vision):</label>
+        <div class="gen-analyze-provider-row">
+          <label for="genAnalyzeProvider">Модель:</label>
+          <select id="genAnalyzeProvider" class="gen-proxy-input" style="max-width:220px;">
+            <option value="openai">GPT-4o (OpenAI)</option>
+            <option value="gemini">Gemini 1.5 Flash (Google)</option>
+          </select>
+        </div>
+        <button type="button" class="btn-secondary gen-analyze-btn" id="genAnalyzeBtn" disabled>Анализировать</button>
         <div class="gen-analyze-result" id="genAnalyzeResult" style="display:none;">
           <textarea id="genAnalyzedRaw" class="gen-prompt-input" readonly rows="12" placeholder="Сырой JSON от GPT появится после анализа" style="font-family:monospace; font-size:0.85rem;"></textarea>
           <div class="gen-analyze-actions">
             <button type="button" class="btn-secondary" id="genAnalyzeCopyRaw">Копировать сырой ответ</button>
+            <button type="button" class="btn-secondary" id="genAnalyzeReplace">Заменить</button>
           </div>
         </div>
         <details id="genAnalyzeDebug" class="gen-analyze-debug" style="display:none; margin-top:1rem;">
@@ -1317,7 +1327,9 @@ Schema (strict structure, follow exactly):
     genAnalyzeBtn?.addEventListener('click', async () => {
       if (!genAnalyzeImageDataUrl) return;
       let base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
-      if (!base) { alert('Укажите URL прокси в поле выше'); genAnalyzeBtn.disabled = false; genAnalyzeBtn.textContent = 'Анализировать через GPT'; return; }
+      const genAnalyzeProvider = document.getElementById('genAnalyzeProvider');
+      const provider = (genAnalyzeProvider?.value === 'gemini') ? 'gemini' : 'openai';
+      if (!base) { alert('Укажите URL прокси в поле выше'); genAnalyzeBtn.disabled = false; return; }
       if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
       const analyzeUrl = base.replace(/\/api\/generate\/?$/, '').replace(/\/api\/?$/, '') + '/api/analyze';
       genAnalyzeBtn.disabled = true;
@@ -1332,7 +1344,8 @@ Schema (strict structure, follow exactly):
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             image: genAnalyzeImageDataUrl,
-            system_prompt: getAnalyzeSystemPrompt()
+            system_prompt: getAnalyzeSystemPrompt(),
+            provider
           }),
         });
         const rawText = await res.text();
@@ -1381,7 +1394,7 @@ Schema (strict structure, follow exactly):
         alert('Ошибка GPT: ' + (err.message || err) + '\n\nОткройте DevTools (F12) → Console для деталей.');
       }
       genAnalyzeBtn.disabled = false;
-      genAnalyzeBtn.textContent = 'Анализировать через GPT';
+      genAnalyzeBtn.textContent = 'Анализировать';
     });
 
     genAnalyzeCopyRaw?.addEventListener('click', async () => {
@@ -1392,6 +1405,15 @@ Schema (strict structure, follow exactly):
       } catch (_) {
         genAnalyzedRaw?.select();
         document.execCommand('copy');
+      }
+    });
+
+    document.getElementById('genAnalyzeReplace')?.addEventListener('click', () => {
+      const text = genAnalyzedRaw?.value || '';
+      if (text && genPromptAnalyzed) {
+        genPromptAnalyzed.value = text;
+        try { localStorage.setItem('ai-vision-prompt-analyzed', text); } catch (_) {}
+        updateGenBtn?.();
       }
     });
 

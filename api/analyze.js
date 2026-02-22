@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { image: imageDataUrl, system_prompt: customSystemPrompt } = req.body || {};
+  const { image: imageDataUrl, system_prompt: customSystemPrompt, provider: providerParam } = req.body || {};
   if (!imageDataUrl || typeof imageDataUrl !== 'string') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(400).json({ error: 'Need image (data URL)' });
@@ -55,14 +55,83 @@ export default async function handler(req, res) {
   const systemPrompt = (typeof customSystemPrompt === 'string' && customSystemPrompt.trim())
     ? customSystemPrompt.trim()
     : DEFAULT_STRUCTURED_PROMPT;
+  const provider = providerParam === 'gemini' ? 'gemini' : 'openai';
 
-  const token = process.env.OPENAI_API_KEY;
-  if (!token) {
+  const setCors = () => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    return res.status(500).json({ error: 'OPENAI_API_KEY not set' });
-  }
+  };
+
+  const parseAndReturnJson = (raw) => {
+    const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    const jsonStr = m ? m[0] : cleaned;
+    try {
+      const parsed = JSON.parse(jsonStr);
+      setCors();
+      return res.status(200).json({ structured: parsed });
+    } catch (e) {
+      const debug = {
+        raw_preview: raw.slice(0, 800),
+        raw_length: raw.length,
+        cleaned_preview: jsonStr.slice(0, 800),
+        parse_error: e.message,
+        parse_position: e.message?.match(/position\s+(\d+)/)?.[1],
+      };
+      console.error('[analyze] JSON parse failed:', e.message, '| raw_len:', raw.length);
+      setCors();
+      return res.status(502).json({ error: 'Invalid JSON in structured response', debug });
+    }
+  };
 
   try {
+    if (provider === 'gemini') {
+      const geminiKey = process.env.GEMINI_API_KEY;
+      if (!geminiKey) {
+        setCors();
+        return res.status(500).json({ error: 'GEMINI_API_KEY not set' });
+      }
+      const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      const mimeType = match ? match[1] : 'image/jpeg';
+      const base64Data = match ? match[2] : imageDataUrl.replace(/^data:[^;]+;base64,/, '');
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { inline_data: { mime_type: mimeType, data: base64Data } },
+                { text: systemPrompt + '\n\nReturn ONLY valid JSON. No markdown. No extra text.' },
+              ],
+            }],
+            generationConfig: {
+              response_mime_type: 'application/json',
+              max_output_tokens: 8192,
+            },
+          }),
+        }
+      );
+      const geminiData = await geminiRes.json().catch(() => ({}));
+      if (!geminiRes.ok) {
+        const msg = geminiData.error?.message || geminiData.error?.code || geminiRes.statusText;
+        setCors();
+        return res.status(geminiRes.status).json({ error: msg || 'Gemini API error' });
+      }
+      const raw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (!raw) {
+        setCors();
+        return res.status(502).json({ error: 'No response content', debug: {} });
+      }
+      return parseAndReturnJson(raw);
+    }
+
+    const token = process.env.OPENAI_API_KEY;
+    if (!token) {
+      setCors();
+      return res.status(500).json({ error: 'OPENAI_API_KEY not set' });
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -91,42 +160,18 @@ export default async function handler(req, res) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       const msg = data.error?.message || data.error?.code || response.statusText;
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      setCors();
       return res.status(response.status).json({ error: msg || 'OpenAI API error' });
     }
 
     const raw = data.choices?.[0]?.message?.content?.trim();
     if (!raw) {
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      setCors();
       return res.status(502).json({ error: 'No response content', debug: {} });
     }
-
-    {
-      let parsed;
-      const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-      let jsonStr = cleaned;
-      const m = cleaned.match(/\{[\s\S]*\}/);
-      if (m) jsonStr = m[0];
-
-      try {
-        parsed = JSON.parse(jsonStr);
-      } catch (e) {
-        const debug = {
-          raw_preview: raw.slice(0, 800),
-          raw_length: raw.length,
-          cleaned_preview: jsonStr.slice(0, 800),
-          parse_error: e.message,
-          parse_position: e.message?.match(/position\s+(\d+)/)?.[1],
-        };
-        console.error('[analyze] JSON parse failed:', debug.parse_error, '| raw_len:', raw.length, '| preview:', raw.slice(0, 200));
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        return res.status(502).json({ error: 'Invalid JSON in structured response', debug });
-      }
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      return res.status(200).json({ structured: parsed });
-    }
+    return parseAndReturnJson(raw);
   } catch (err) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    setCors();
     return res.status(500).json({ error: err.message || 'Analyze error' });
   }
 }
