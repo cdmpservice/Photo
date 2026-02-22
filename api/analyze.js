@@ -71,7 +71,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-4o',
-        max_tokens: 2500,
+        max_tokens: 4000,
+        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },
           {
@@ -97,17 +98,29 @@ export default async function handler(req, res) {
     const raw = data.choices?.[0]?.message?.content?.trim();
     if (!raw) {
       res.setHeader('Access-Control-Allow-Origin', '*');
-      return res.status(502).json({ error: 'No response content' });
+      return res.status(502).json({ error: 'No response content', debug: {} });
     }
 
     {
       let parsed;
+      const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      let jsonStr = cleaned;
+      const m = cleaned.match(/\{[\s\S]*\}/);
+      if (m) jsonStr = m[0];
+
       try {
-        const cleaned = raw.replace(/^```json\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-        parsed = JSON.parse(cleaned);
+        parsed = JSON.parse(jsonStr);
       } catch (e) {
+        const debug = {
+          raw_preview: raw.slice(0, 800),
+          raw_length: raw.length,
+          cleaned_preview: jsonStr.slice(0, 800),
+          parse_error: e.message,
+          parse_position: e.message?.match(/position\s+(\d+)/)?.[1],
+        };
+        console.error('[analyze] JSON parse failed:', debug.parse_error, '| raw_len:', raw.length, '| preview:', raw.slice(0, 200));
         res.setHeader('Access-Control-Allow-Origin', '*');
-        return res.status(502).json({ error: 'Invalid JSON in structured response' });
+        return res.status(502).json({ error: 'Invalid JSON in structured response', debug });
       }
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.status(200).json({ structured: parsed });
