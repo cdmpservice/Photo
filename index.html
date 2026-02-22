@@ -776,20 +776,10 @@
       <div class="gen-section gen-analyze-section">
         <label>Промпт из GPT (анализ фото):</label>
         <button type="button" class="btn-secondary gen-analyze-btn" id="genAnalyzeBtn" disabled>Анализировать через GPT</button>
-        <div id="genAnalyzeTagsWrap" class="gen-analyze-tags-wrap" style="display:none;">
-          <p class="gen-setting-hint">Выберите блоки для промпта:</p>
-          <div id="genAnalyzeTagsList" class="gen-analyze-tags-list"></div>
-          <div class="gen-analyze-tags-actions">
-            <button type="button" class="btn-secondary" id="genAnalyzeTagsSelectAll">Выбрать все</button>
-            <button type="button" class="btn-secondary" id="genAnalyzeTagsReset">Сбросить</button>
-            <button type="button" class="btn-secondary" id="genAnalyzeBuildPrompt">Собрать промпт из выбранного</button>
-          </div>
-        </div>
         <div class="gen-analyze-result" id="genAnalyzeResult" style="display:none;">
-          <textarea id="genAnalyzedPrompt" class="gen-prompt-input" readonly rows="4" placeholder="Промпт появится после анализа"></textarea>
+          <textarea id="genAnalyzedRaw" class="gen-prompt-input" readonly rows="12" placeholder="Сырой JSON от GPT появится после анализа" style="font-family:monospace; font-size:0.85rem;"></textarea>
           <div class="gen-analyze-actions">
-            <button type="button" class="btn-secondary" id="genAnalyzeCopy">Копировать</button>
-            <button type="button" class="btn-secondary" id="genAnalyzeInsert">Вставить в промпт</button>
+            <button type="button" class="btn-secondary" id="genAnalyzeCopyRaw">Копировать сырой ответ</button>
           </div>
         </div>
         <details id="genAnalyzeDebug" class="gen-analyze-debug" style="display:none; margin-top:1rem;">
@@ -801,7 +791,7 @@
       <div class="gen-section">
         <label>Промпт (на английском лучше):</label>
         <textarea id="genPrompt" class="gen-prompt-input" placeholder="основной промпт, например: same person in a forest, autumn lighting" rows="3"></textarea>
-        <label class="gen-prompt-sublabel">Анализ GPT (вставляется по кнопке «Вставить в промпт»):</label>
+        <label class="gen-prompt-sublabel">Анализ GPT:</label>
         <textarea id="genPromptAnalyzed" class="gen-prompt-input" placeholder="сюда попадает результат анализа" rows="4"></textarea>
       </div>
       <button type="button" class="btn-detect gen-btn" id="genBtn" disabled>Сгенерировать</button>
@@ -1078,10 +1068,7 @@ Schema (strict structure, follow exactly):
     const genResult = document.getElementById('genResult');
     const genResultPlaceholder = document.getElementById('genResultPlaceholder');
     const genAnalyzeBtn = document.getElementById('genAnalyzeBtn');
-    const genAnalyzedPrompt = document.getElementById('genAnalyzedPrompt');
     const genAnalyzeResult = document.getElementById('genAnalyzeResult');
-    const genAnalyzeCopy = document.getElementById('genAnalyzeCopy');
-    const genAnalyzeInsert = document.getElementById('genAnalyzeInsert');
     const genAnalyzePreview = document.getElementById('genAnalyzePreview');
     const genAnalyzePlaceholder = document.getElementById('genAnalyzePlaceholder');
     const genAnalyzeSlot = document.getElementById('genAnalyzeSlot');
@@ -1308,73 +1295,8 @@ Schema (strict structure, follow exactly):
     });
 
     let lastStructuredData = null;
-    const genAnalyzeTagsWrap = document.getElementById('genAnalyzeTagsWrap');
-    const genAnalyzeTagsList = document.getElementById('genAnalyzeTagsList');
-    const genAnalyzeTagsSelectAll = document.getElementById('genAnalyzeTagsSelectAll');
-    const genAnalyzeTagsReset = document.getElementById('genAnalyzeTagsReset');
-    const genAnalyzeBuildPrompt = document.getElementById('genAnalyzeBuildPrompt');
-
-    function getValueByPath(obj, path) {
-      const parts = path.split('.');
-      let v = obj;
-      for (const p of parts) {
-        if (v == null || typeof v !== 'object') return undefined;
-        v = v[p];
-      }
-      return v;
-    }
-
-    function collectPathsFromObject(obj, prefix = '', maxDepth = 4) {
-      const items = [];
-      if (obj == null || typeof obj !== 'object') return items;
-      const depth = prefix ? prefix.split('.').length : 0;
-      if (depth >= maxDepth) return items;
-      if (Array.isArray(obj)) {
-        const label = prefix.split('.').pop() || prefix;
-        items.push({ key: prefix, label });
-        return items;
-      }
-      for (const key of Object.keys(obj)) {
-        const path = prefix ? `${prefix}.${key}` : key;
-        const val = obj[key];
-        const label = path.replace(/\./g, ' › ').replace(/_/g, ' ');
-        if (val == null || typeof val !== 'object') {
-          items.push({ key: path, label });
-        } else if (Array.isArray(val)) {
-          items.push({ key: path, label });
-        } else {
-          items.push({ key: path, label });
-          items.push(...collectPathsFromObject(val, path, maxDepth));
-        }
-      }
-      return items;
-    }
-
-    function renderStructuredTags() {
-      if (!genAnalyzeTagsList || !lastStructuredData) return;
-      const tags = collectPathsFromObject(lastStructuredData);
-      if (tags.length === 0) {
-        genAnalyzeTagsList.innerHTML = '<em>Структура пуста</em>';
-        return;
-      }
-      genAnalyzeTagsList.innerHTML = tags.map(({ key, label }) => {
-        const safeId = 'tag-' + key.replace(/\./g, '-').replace(/[^\w-]/g, '');
-        return `<label><input type="checkbox" class="gen-tag-cb" data-tag="${key.replace(/"/g, '&quot;')}"> ${label}</label>`;
-      }).join('');
-    }
-
-    function buildPromptFromTags() {
-      if (!lastStructuredData || !genAnalyzedPrompt) return;
-      const checked = Array.from(document.querySelectorAll('.gen-tag-cb:checked')).map(el => el.dataset.tag);
-      if (checked.length === 0) { genAnalyzedPrompt.value = ''; genAnalyzeResult.style.display = 'block'; return; }
-      const parts = checked.map(key => {
-        const val = getValueByPath(lastStructuredData, key);
-        if (val === undefined) return key + ': (нет в ответе)';
-        return key + ': ' + JSON.stringify(val).replace(/\s+/g, ' ');
-      });
-      genAnalyzedPrompt.value = parts.join('\n\n');
-      genAnalyzeResult.style.display = 'block';
-    }
+    const genAnalyzedRaw = document.getElementById('genAnalyzedRaw');
+    const genAnalyzeCopyRaw = document.getElementById('genAnalyzeCopyRaw');
 
     genAnalyzeBtn?.addEventListener('click', async () => {
       if (!genAnalyzeImageDataUrl) return;
@@ -1385,7 +1307,6 @@ Schema (strict structure, follow exactly):
       genAnalyzeBtn.disabled = true;
       genAnalyzeBtn.textContent = 'Анализ...';
       genAnalyzeResult.style.display = 'none';
-      genAnalyzeTagsWrap.style.display = 'none';
       const genAnalyzeDebugEl = document.getElementById('genAnalyzeDebug');
       if (genAnalyzeDebugEl) genAnalyzeDebugEl.style.display = 'none';
       lastStructuredData = null;
@@ -1434,8 +1355,9 @@ Schema (strict structure, follow exactly):
         if (genAnalyzeDebug) genAnalyzeDebug.style.display = 'none';
         if (data.structured != null) {
           lastStructuredData = data.structured;
-          genAnalyzeTagsWrap.style.display = 'block';
-          renderStructuredTags();
+          const rawJson = JSON.stringify(lastStructuredData, null, 2);
+          if (genAnalyzedRaw) genAnalyzedRaw.value = rawJson;
+          genAnalyzeResult.style.display = 'block';
         }
       } catch (err) {
         console.error('[GPT analyze]', err.message || err);
@@ -1446,23 +1368,13 @@ Schema (strict structure, follow exactly):
       genAnalyzeBtn.textContent = 'Анализировать через GPT';
     });
 
-    genAnalyzeTagsSelectAll?.addEventListener('click', () => {
-      document.querySelectorAll('.gen-tag-cb').forEach(cb => cb.checked = true);
-    });
-    genAnalyzeTagsReset?.addEventListener('click', () => {
-      document.querySelectorAll('.gen-tag-cb').forEach(cb => cb.checked = false);
-    });
-    genAnalyzeBuildPrompt?.addEventListener('click', () => {
-      buildPromptFromTags();
-    });
-
-    genAnalyzeCopy?.addEventListener('click', async () => {
-      const text = genAnalyzedPrompt?.value || '';
+    genAnalyzeCopyRaw?.addEventListener('click', async () => {
+      const text = genAnalyzedRaw?.value || '';
       if (!text) return;
       try {
         await navigator.clipboard.writeText(text);
       } catch (_) {
-        genAnalyzedPrompt?.select();
+        genAnalyzedRaw?.select();
         document.execCommand('copy');
       }
     });
@@ -1477,11 +1389,6 @@ Schema (strict structure, follow exactly):
         pre?.select?.();
         document.execCommand('copy');
       }
-    });
-
-    genAnalyzeInsert?.addEventListener('click', () => {
-      const val = genAnalyzedPrompt?.value || '';
-      if (val && genPromptAnalyzed) genPromptAnalyzed.value = val;
     });
 
     function renderVariants(items) {
