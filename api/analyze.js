@@ -94,7 +94,7 @@ export default async function handler(req, res) {
       const mimeType = match ? match[1] : 'image/jpeg';
       const base64Data = match ? match[2] : imageDataUrl.replace(/^data:[^;]+;base64,/, '');
       const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=${encodeURIComponent(geminiKey)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
