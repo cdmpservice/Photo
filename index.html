@@ -571,7 +571,7 @@
     .gen-analyze-settings-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
     .gen-check-row { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem; }
     .gen-analyze-tags-wrap { margin-top: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 12px; border: 2px solid var(--bg-input); }
-    .gen-analyze-tags-list { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 0.5rem 0; }
+    .gen-analyze-tags-list { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 0.5rem 0; max-height: 280px; overflow-y: auto; }
     .gen-analyze-tags-list label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.85rem; }
     .gen-analyze-tags-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
     .gen-prompt-sublabel { display: block; color: var(--text-muted); font-size: 0.9rem; margin-top: 1rem; margin-bottom: 0.5rem; }
@@ -1299,24 +1299,6 @@ Schema (strict structure, follow exactly):
       }
     });
 
-    const STRUCTURED_TAGS = [
-      { key: 'global_geometry', label: 'Геометрия / ракурс' },
-      { key: 'camera_setup', label: 'Камера' },
-      { key: 'framing_and_layout', label: 'Кадр и композиция' },
-      { key: 'attention_hierarchy', label: 'Иерархия внимания' },
-      { key: 'subject_analysis', label: 'Анализ субъекта (всё)' },
-      { key: 'subject_analysis.main_subject', label: 'Основной субъект' },
-      { key: 'subject_analysis.human_subjects', label: 'Люди / модели' },
-      { key: 'subject_analysis.product_objects', label: 'Продукты / объекты' },
-      { key: 'spatial_depth_model', label: 'Глубина / слои' },
-      { key: 'lighting_design', label: 'Свет' },
-      { key: 'color_and_tone', label: 'Цвет и тон' },
-      { key: 'texture_and_materials', label: 'Текстуры и материалы' },
-      { key: 'environment_model', label: 'Интерьер / окружение' },
-      { key: 'branding_and_marketing_structure', label: 'Брендинг / маркетинг' },
-      { key: 'generation_blueprint', label: 'Инструкции для генерации' },
-    ];
-
     let lastStructuredData = null;
     const genAnalyzeTagsWrap = document.getElementById('genAnalyzeTagsWrap');
     const genAnalyzeTagsList = document.getElementById('genAnalyzeTagsList');
@@ -1334,11 +1316,42 @@ Schema (strict structure, follow exactly):
       return v;
     }
 
+    function collectPathsFromObject(obj, prefix = '', maxDepth = 4) {
+      const items = [];
+      if (obj == null || typeof obj !== 'object') return items;
+      const depth = prefix ? prefix.split('.').length : 0;
+      if (depth >= maxDepth) return items;
+      if (Array.isArray(obj)) {
+        const label = prefix.split('.').pop() || prefix;
+        items.push({ key: prefix, label });
+        return items;
+      }
+      for (const key of Object.keys(obj)) {
+        const path = prefix ? `${prefix}.${key}` : key;
+        const val = obj[key];
+        const label = path.replace(/\./g, ' › ').replace(/_/g, ' ');
+        if (val == null || typeof val !== 'object') {
+          items.push({ key: path, label });
+        } else if (Array.isArray(val)) {
+          items.push({ key: path, label });
+        } else {
+          items.push({ key: path, label });
+          items.push(...collectPathsFromObject(val, path, maxDepth));
+        }
+      }
+      return items;
+    }
+
     function renderStructuredTags() {
       if (!genAnalyzeTagsList || !lastStructuredData) return;
-      genAnalyzeTagsList.innerHTML = STRUCTURED_TAGS.map(({ key, label }) => {
-        const id = 'tag-' + key.replace(/\./g, '-');
-        return `<label><input type="checkbox" class="gen-tag-cb" data-tag="${key}"> ${label}</label>`;
+      const tags = collectPathsFromObject(lastStructuredData);
+      if (tags.length === 0) {
+        genAnalyzeTagsList.innerHTML = '<em>Структура пуста</em>';
+        return;
+      }
+      genAnalyzeTagsList.innerHTML = tags.map(({ key, label }) => {
+        const safeId = 'tag-' + key.replace(/\./g, '-').replace(/[^\w-]/g, '');
+        return `<label><input type="checkbox" class="gen-tag-cb" data-tag="${key.replace(/"/g, '&quot;')}"> ${label}</label>`;
       }).join('');
     }
 
