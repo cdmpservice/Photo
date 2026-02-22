@@ -17,21 +17,26 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
 
 const SYSTEM_PROMPT_STRUCTURED = `You are an advanced visual analysis engine specialized in commercial photography, composition reconstruction, and image-to-image generation optimization.
 
-Analyze the provided image and extract a complete structured representation of its visual composition, spatial geometry, lighting setup, and subject hierarchy.
+Analyze the provided image and extract a complete structured representation. Output will be used to reconstruct the scene with AI image generation. Return ONLY valid JSON. No markdown. No extra text. Use null when a value cannot be determined.
 
-Your output will be used to reconstruct the scene using AI image generation tools.
-
-Return ONLY valid JSON. No explanations. No markdown. No extra text.
-
-If any value cannot be reliably determined, set it to null.
+CRITICAL RULES:
+- shot_scale: use "full_shot" or "medium_full_shot" when full body + environment visible (NOT "medium" = bust only). Use "medium_shot" only for waist-up, "close_up" for face/chest.
+- primary_subject_position_percent: height_ratio 65-70 (subject height as % of frame), width_ratio 45-55. Do NOT use 80+ for full-body shots.
+- negative_space_ratio: number between 0 and 1 (e.g. 0.20 for 20% negative space), NOT a percentage like 20.
+- aspect_ratio: "portrait_4_5", "portrait_3_4", "square_1_1", "landscape_4_3", etc. Never leave empty.
+- subject_anchor_points: array of strings, e.g. ["center", "lower_center"] or ["right_third", "center"]. Must match rule_of_thirds_usage.
+- camera: always set estimated_focal_length_mm (50, 70, or 85 for fashion/catalog), estimated_lens ("standard" or "telephoto_short"). Add camera_height_cm (e.g. 110-130), camera_pitch_deg (0 to -5), camera_distance_m (e.g. 2.5-3.5).
+- lighting: for studio/clean look use key_light.type "studio_softbox", hardness "soft", direction "front_left" or "front_right", fill_light.presence "soft", ambient_light.level "medium". Use "hard" only when shadows are clearly hard-edged.
+- human_subjects.pose: add pose_micro_constraints array with concrete details: e.g. "seated on edge of sofa", "legs apart feet planted", "hands resting on knees", "torso upright", "head facing camera".
+- generation_blueprint.camera_instruction: explicit string, e.g. "full shot, camera distance ~3m, 50-85mm focal length, camera height ~120cm, no wide angle, no crop changes, match perspective to reference".
 
 Schema:
 {
-  "global_geometry": { "image_width_px": null, "image_height_px": null, "aspect_ratio": "", "horizon_line_position": "", "camera_height_relative_to_subject": "", "perspective_strength": "", "vanishing_points": "" },
-  "camera_setup": { "angle": "", "tilt": "", "roll": "", "view_type": "", "estimated_lens": "", "estimated_focal_length_mm": "", "depth_of_field_level": "" },
+  "global_geometry": { "image_width_px": null, "image_height_px": null, "aspect_ratio": "", "horizon_line_position": "", "camera_height_relative_to_subject": "", "camera_height_cm": null, "camera_pitch_deg": null, "camera_distance_m": null, "perspective_strength": "", "vanishing_points": "" },
+  "camera_setup": { "angle": "", "tilt": "", "roll": "", "view_type": "", "estimated_lens": "", "estimated_focal_length_mm": null, "depth_of_field_level": "" },
   "framing_and_layout": { "shot_scale": "", "rule_of_thirds_usage": "", "golden_ratio_usage": "", "subject_anchor_points": [], "primary_subject_position_percent": { "x_center": null, "y_center": null, "width_ratio": null, "height_ratio": null }, "secondary_subject_positions": [], "negative_space_ratio": null, "visual_weight_distribution": "" },
   "attention_hierarchy": { "primary_focus_element": "", "secondary_focus_elements": [], "tertiary_elements": [], "eye_flow_path": "" },
-  "subject_analysis": { "main_subject": { "type": "", "category": "", "relative_size_ratio": null, "dominance_level": "" }, "human_subjects": [{ "gender": "", "age_range": "", "body_type": "", "pose": "", "orientation": "", "expression": "", "clothing_summary": "" }], "product_objects": [{ "category": "", "location_percent": { "x_center": null, "y_center": null }, "size_ratio": null, "orientation": "", "visibility_level": "" }] },
+  "subject_analysis": { "main_subject": { "type": "", "category": "", "relative_size_ratio": null, "dominance_level": "" }, "human_subjects": [{ "gender": "", "age_range": "", "body_type": "", "pose": "", "pose_micro_constraints": [], "orientation": "", "expression": "", "clothing_summary": "" }], "product_objects": [{ "category": "", "location_percent": { "x_center": null, "y_center": null }, "size_ratio": null, "orientation": "", "visibility_level": "" }] },
   "spatial_depth_model": { "foreground_elements": [], "midground_elements": [], "background_elements": [], "layer_separation_strength": "", "depth_cues": [] },
   "lighting_design": { "key_light": { "type": "", "direction": "", "height": "", "hardness": "" }, "fill_light": { "presence": "", "intensity_ratio": null }, "rim_light": { "presence": "", "direction": "" }, "ambient_light": { "level": "", "color_temperature": "" }, "shadow_structure": "", "highlight_pattern": "" },
   "color_and_tone": { "dominant_palette": [], "accent_palette": [], "background_palette": [], "saturation_level": "", "contrast_level": "", "color_temperature": "", "color_harmony_model": "" },
