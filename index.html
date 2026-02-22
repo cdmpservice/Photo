@@ -1000,24 +1000,32 @@ Schema (strict structure, follow exactly):
         } else {
           btn.disabled = true;
           btn.textContent = '…';
-          let blob;
+          let dataUrl;
           try {
             const res = await fetch(imageUrl, { mode: 'cors' });
             if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
-            blob = await res.blob();
+            const blob = await res.blob();
+            dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
           } catch (directErr) {
-            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(imageUrl);
-            const res = await fetch(proxyUrl, { mode: 'cors' });
-            if (!res.ok) throw new Error('CORS: ' + res.status);
-            blob = await res.blob();
+            let base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
+            if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
+            base = base.replace(/\/api\/generate\/?$/, '').replace(/\/api\/?$/, '') || window.location.origin;
+            const proxyUrl = base + '/api/fetch-image';
+            const res = await fetch(proxyUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: imageUrl }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || res.status + ' ' + res.statusText);
+            dataUrl = data.dataUrl;
           }
-          const reader = new FileReader();
-          const rawDataUrl = await new Promise((resolve, reject) => {
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          const r = await compressImageForReplicate(rawDataUrl);
+          const r = await compressImageForReplicate(dataUrl);
           genImageDataUrl = r.dataUrl;
           genSourceWidth = r.width;
           genSourceHeight = r.height;
@@ -1151,24 +1159,32 @@ Schema (strict structure, follow exactly):
           const r = await compressImageForReplicate(imageUrl, 99999);
           genAnalyzeImageDataUrl = r.dataUrl;
         } else {
-          let blob;
+          let dataUrl;
           try {
             const res = await fetch(imageUrl, { mode: 'cors' });
             if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
-            blob = await res.blob();
+            const blob = await res.blob();
+            dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
           } catch (directErr) {
-            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(imageUrl);
-            const res = await fetch(proxyUrl, { mode: 'cors' });
-            if (!res.ok) throw new Error('CORS: ' + res.status);
-            blob = await res.blob();
+            let base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
+            if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
+            base = (base ? base.replace(/\/api\/generate\/?$/, '').replace(/\/api\/?$/, '') : null) || window.location.origin;
+            const proxyUrl = base + '/api/fetch-image';
+            const res = await fetch(proxyUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: imageUrl }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || res.status + ' ' + res.statusText);
+            dataUrl = data.dataUrl;
           }
-          const reader = new FileReader();
-          const rawDataUrl = await new Promise((resolve, reject) => {
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          const r = await compressImageForReplicate(rawDataUrl);
+          const r = await compressImageForReplicate(dataUrl);
           genAnalyzeImageDataUrl = r.dataUrl;
         }
       } catch (err) {
