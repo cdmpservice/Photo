@@ -15,6 +15,32 @@ const SYSTEM_PROMPT = `You are an expert at describing photos for image-to-image
 
 Output ONLY the prompt text in English, no explanations. Be very detailed, especially for interior and model description. Use 2-5 descriptive sentences.`;
 
+const SYSTEM_PROMPT_STRUCTURED = `You are an advanced visual analysis engine specialized in commercial photography, composition reconstruction, and image-to-image generation optimization.
+
+Analyze the provided image and extract a complete structured representation of its visual composition, spatial geometry, lighting setup, and subject hierarchy.
+
+Your output will be used to reconstruct the scene using AI image generation tools.
+
+Return ONLY valid JSON. No explanations. No markdown. No extra text.
+
+If any value cannot be reliably determined, set it to null.
+
+Schema:
+{
+  "global_geometry": { "image_width_px": null, "image_height_px": null, "aspect_ratio": "", "horizon_line_position": "", "camera_height_relative_to_subject": "", "perspective_strength": "", "vanishing_points": "" },
+  "camera_setup": { "angle": "", "tilt": "", "roll": "", "view_type": "", "estimated_lens": "", "estimated_focal_length_mm": "", "depth_of_field_level": "" },
+  "framing_and_layout": { "shot_scale": "", "rule_of_thirds_usage": "", "golden_ratio_usage": "", "subject_anchor_points": [], "primary_subject_position_percent": { "x_center": null, "y_center": null, "width_ratio": null, "height_ratio": null }, "secondary_subject_positions": [], "negative_space_ratio": null, "visual_weight_distribution": "" },
+  "attention_hierarchy": { "primary_focus_element": "", "secondary_focus_elements": [], "tertiary_elements": [], "eye_flow_path": "" },
+  "subject_analysis": { "main_subject": { "type": "", "category": "", "relative_size_ratio": null, "dominance_level": "" }, "human_subjects": [{ "gender": "", "age_range": "", "body_type": "", "pose": "", "orientation": "", "expression": "", "clothing_summary": "" }], "product_objects": [{ "category": "", "location_percent": { "x_center": null, "y_center": null }, "size_ratio": null, "orientation": "", "visibility_level": "" }] },
+  "spatial_depth_model": { "foreground_elements": [], "midground_elements": [], "background_elements": [], "layer_separation_strength": "", "depth_cues": [] },
+  "lighting_design": { "key_light": { "type": "", "direction": "", "height": "", "hardness": "" }, "fill_light": { "presence": "", "intensity_ratio": null }, "rim_light": { "presence": "", "direction": "" }, "ambient_light": { "level": "", "color_temperature": "" }, "shadow_structure": "", "highlight_pattern": "" },
+  "color_and_tone": { "dominant_palette": [], "accent_palette": [], "background_palette": [], "saturation_level": "", "contrast_level": "", "color_temperature": "", "color_harmony_model": "" },
+  "texture_and_materials": { "main_surface_textures": [], "fabric_types": [], "reflectivity_levels": "", "roughness_distribution": "" },
+  "environment_model": { "location_type": "", "style_category": "", "architectural_elements": [], "furniture_objects": [], "decorative_elements": [], "scene_density": "", "cleanliness_level": "" },
+  "branding_and_marketing_structure": { "commercial_intent_level": "", "product_visibility_priority": "", "trust_elements": [], "emotional_triggers": [], "call_to_action_visuals": [] },
+  "generation_blueprint": { "camera_instruction": "", "composition_instruction": "", "lighting_instruction": "", "subject_instruction": "", "environment_instruction": "", "style_instruction": "" }
+}`;
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -28,14 +54,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { image: imageDataUrl, system_prompt: customSystemPrompt } = req.body || {};
+  const { image: imageDataUrl, system_prompt: customSystemPrompt, structured: useStructured } = req.body || {};
   if (!imageDataUrl || typeof imageDataUrl !== 'string') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(400).json({ error: 'Need image (data URL)' });
   }
-  const systemPrompt = (typeof customSystemPrompt === 'string' && customSystemPrompt.trim())
-    ? customSystemPrompt.trim()
-    : SYSTEM_PROMPT;
+  const isStructured = useStructured === true || useStructured === 'true' || useStructured === '1';
+  const systemPrompt = isStructured
+    ? SYSTEM_PROMPT_STRUCTURED
+    : ((typeof customSystemPrompt === 'string' && customSystemPrompt.trim()) ? customSystemPrompt.trim() : SYSTEM_PROMPT);
 
   const token = process.env.OPENAI_API_KEY;
   if (!token) {
@@ -52,7 +79,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-4o',
-        max_tokens: 500,
+        max_tokens: isStructured ? 2500 : 500,
         messages: [
           { role: 'system', content: systemPrompt },
           {
@@ -75,14 +102,27 @@ export default async function handler(req, res) {
       return res.status(response.status).json({ error: msg || 'OpenAI API error' });
     }
 
-    const prompt = data.choices?.[0]?.message?.content?.trim();
-    if (!prompt) {
+    const raw = data.choices?.[0]?.message?.content?.trim();
+    if (!raw) {
       res.setHeader('Access-Control-Allow-Origin', '*');
-      return res.status(502).json({ error: 'No prompt in response' });
+      return res.status(502).json({ error: 'No response content' });
+    }
+
+    if (isStructured) {
+      let parsed;
+      try {
+        const cleaned = raw.replace(/^```json\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+        parsed = JSON.parse(cleaned);
+      } catch (e) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.status(502).json({ error: 'Invalid JSON in structured response' });
+      }
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.status(200).json({ structured: parsed });
     }
 
     res.setHeader('Access-Control-Allow-Origin', '*');
-    return res.status(200).json({ prompt });
+    return res.status(200).json({ prompt: raw });
   } catch (err) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(500).json({ error: err.message || 'Analyze error' });

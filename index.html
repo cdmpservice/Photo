@@ -568,6 +568,11 @@
     .gen-analyze-result textarea { background: var(--bg-input); border: 2px solid var(--bg-card); }
     .gen-analyze-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     .gen-analyze-settings-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    .gen-check-row { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem; }
+    .gen-analyze-tags-wrap { margin-top: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 12px; border: 2px solid var(--bg-input); }
+    .gen-analyze-tags-list { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 0.5rem 0; }
+    .gen-analyze-tags-list label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.85rem; }
+    .gen-analyze-tags-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
   </style>
 </head>
 <body>
@@ -764,7 +769,20 @@
       </div>
       <div class="gen-section gen-analyze-section">
         <label>Промпт из GPT (анализ фото):</label>
+        <label class="gen-check-row" style="margin-bottom: 0.5rem;">
+          <input type="checkbox" id="genAnalyzeStructured">
+          <span>Структурированный анализ (JSON по схеме)</span>
+        </label>
         <button type="button" class="btn-secondary gen-analyze-btn" id="genAnalyzeBtn" disabled>Анализировать через GPT</button>
+        <div id="genAnalyzeTagsWrap" class="gen-analyze-tags-wrap" style="display:none;">
+          <p class="gen-setting-hint">Выберите блоки для промпта:</p>
+          <div id="genAnalyzeTagsList" class="gen-analyze-tags-list"></div>
+          <div class="gen-analyze-tags-actions">
+            <button type="button" class="btn-secondary" id="genAnalyzeTagsSelectAll">Выбрать все</button>
+            <button type="button" class="btn-secondary" id="genAnalyzeTagsReset">Сбросить</button>
+            <button type="button" class="btn-secondary" id="genAnalyzeBuildPrompt">Собрать промпт из выбранного</button>
+          </div>
+        </div>
         <div class="gen-analyze-result" id="genAnalyzeResult" style="display:none;">
           <textarea id="genAnalyzedPrompt" class="gen-prompt-input" readonly rows="4" placeholder="Промпт появится после анализа"></textarea>
           <div class="gen-analyze-actions">
@@ -1228,22 +1246,83 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
       updateGenBtn();
     });
 
+    const STRUCTURED_TAGS = [
+      { key: 'global_geometry', label: 'Геометрия / ракурс' },
+      { key: 'camera_setup', label: 'Камера' },
+      { key: 'framing_and_layout', label: 'Кадр и композиция' },
+      { key: 'attention_hierarchy', label: 'Иерархия внимания' },
+      { key: 'subject_analysis', label: 'Анализ субъекта (всё)' },
+      { key: 'subject_analysis.main_subject', label: 'Основной субъект' },
+      { key: 'subject_analysis.human_subjects', label: 'Люди / модели' },
+      { key: 'subject_analysis.product_objects', label: 'Продукты / объекты' },
+      { key: 'spatial_depth_model', label: 'Глубина / слои' },
+      { key: 'lighting_design', label: 'Свет' },
+      { key: 'color_and_tone', label: 'Цвет и тон' },
+      { key: 'texture_and_materials', label: 'Текстуры и материалы' },
+      { key: 'environment_model', label: 'Интерьер / окружение' },
+      { key: 'branding_and_marketing_structure', label: 'Брендинг / маркетинг' },
+      { key: 'generation_blueprint', label: 'Инструкции для генерации' },
+    ];
+
+    let lastStructuredData = null;
+    const genAnalyzeStructured = document.getElementById('genAnalyzeStructured');
+    const genAnalyzeTagsWrap = document.getElementById('genAnalyzeTagsWrap');
+    const genAnalyzeTagsList = document.getElementById('genAnalyzeTagsList');
+    const genAnalyzeTagsSelectAll = document.getElementById('genAnalyzeTagsSelectAll');
+    const genAnalyzeTagsReset = document.getElementById('genAnalyzeTagsReset');
+    const genAnalyzeBuildPrompt = document.getElementById('genAnalyzeBuildPrompt');
+
+    function getValueByPath(obj, path) {
+      const parts = path.split('.');
+      let v = obj;
+      for (const p of parts) {
+        if (v == null || typeof v !== 'object') return undefined;
+        v = v[p];
+      }
+      return v;
+    }
+
+    function renderStructuredTags() {
+      if (!genAnalyzeTagsList || !lastStructuredData) return;
+      genAnalyzeTagsList.innerHTML = STRUCTURED_TAGS.map(({ key, label }) => {
+        const id = 'tag-' + key.replace(/\./g, '-');
+        return `<label><input type="checkbox" class="gen-tag-cb" data-tag="${key}"> ${label}</label>`;
+      }).join('');
+    }
+
+    function buildPromptFromTags() {
+      if (!lastStructuredData || !genAnalyzedPrompt) return;
+      const checked = Array.from(document.querySelectorAll('.gen-tag-cb:checked')).map(el => el.dataset.tag);
+      if (checked.length === 0) { genAnalyzedPrompt.value = ''; genAnalyzeResult.style.display = 'block'; return; }
+      const parts = checked.map(key => {
+        const val = getValueByPath(lastStructuredData, key);
+        if (val === undefined) return key + ': (нет в ответе)';
+        return key + ': ' + JSON.stringify(val).replace(/\s+/g, ' ');
+      });
+      genAnalyzedPrompt.value = parts.join('\n\n');
+      genAnalyzeResult.style.display = 'block';
+    }
+
     genAnalyzeBtn?.addEventListener('click', async () => {
       if (!genAnalyzeImageDataUrl) return;
       let base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
       if (!base) { alert('Укажите URL прокси в поле выше'); genAnalyzeBtn.disabled = false; genAnalyzeBtn.textContent = 'Анализировать через GPT'; return; }
       if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
       const analyzeUrl = base.replace(/\/api\/generate\/?$/, '').replace(/\/api\/?$/, '') + '/api/analyze';
+      const useStructured = genAnalyzeStructured?.checked ?? false;
       genAnalyzeBtn.disabled = true;
       genAnalyzeBtn.textContent = 'Анализ...';
       genAnalyzeResult.style.display = 'none';
+      genAnalyzeTagsWrap.style.display = 'none';
+      lastStructuredData = null;
       try {
         const res = await fetch(analyzeUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             image: genAnalyzeImageDataUrl,
-            system_prompt: getAnalyzeSystemPrompt()
+            system_prompt: useStructured ? undefined : getAnalyzeSystemPrompt(),
+            structured: useStructured
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -1254,14 +1333,29 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
           }
           throw new Error(msg);
         }
-        const prompt = data.prompt || '';
-        genAnalyzedPrompt.value = prompt;
-        genAnalyzeResult.style.display = 'block';
+        if (data.structured != null) {
+          lastStructuredData = data.structured;
+          genAnalyzeTagsWrap.style.display = 'block';
+          renderStructuredTags();
+        } else {
+          genAnalyzedPrompt.value = data.prompt || '';
+          genAnalyzeResult.style.display = 'block';
+        }
       } catch (err) {
         alert('Ошибка GPT: ' + (err.message || err));
       }
       genAnalyzeBtn.disabled = false;
       genAnalyzeBtn.textContent = 'Анализировать через GPT';
+    });
+
+    genAnalyzeTagsSelectAll?.addEventListener('click', () => {
+      document.querySelectorAll('.gen-tag-cb').forEach(cb => cb.checked = true);
+    });
+    genAnalyzeTagsReset?.addEventListener('click', () => {
+      document.querySelectorAll('.gen-tag-cb').forEach(cb => cb.checked = false);
+    });
+    genAnalyzeBuildPrompt?.addEventListener('click', () => {
+      buildPromptFromTags();
     });
 
     genAnalyzeCopy?.addEventListener('click', async () => {
