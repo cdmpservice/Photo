@@ -573,6 +573,7 @@
     .gen-analyze-tags-list { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 0.5rem 0; }
     .gen-analyze-tags-list label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.85rem; }
     .gen-analyze-tags-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    .gen-prompt-sublabel { display: block; color: var(--text-muted); font-size: 0.9rem; margin-top: 1rem; margin-bottom: 0.5rem; }
   </style>
 </head>
 <body>
@@ -793,7 +794,9 @@
       </div>
       <div class="gen-section">
         <label>Промпт (на английском лучше):</label>
-        <textarea id="genPrompt" class="gen-prompt-input" placeholder="например: same person in a forest, autumn lighting"></textarea>
+        <textarea id="genPrompt" class="gen-prompt-input" placeholder="основной промпт, например: same person in a forest, autumn lighting" rows="3"></textarea>
+        <label class="gen-prompt-sublabel">Анализ GPT (вставляется по кнопке «Вставить в промпт»):</label>
+        <textarea id="genPromptAnalyzed" class="gen-prompt-input" placeholder="сюда попадает результат анализа" rows="4"></textarea>
       </div>
       <button type="button" class="btn-detect gen-btn" id="genBtn" disabled>Сгенерировать</button>
       <p class="status" id="genStatus"></p>
@@ -1022,12 +1025,15 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
     // Generation tab
     const genProxyUrl = document.getElementById('genProxyUrl');
     const genPrompt = document.getElementById('genPrompt');
+    const genPromptAnalyzed = document.getElementById('genPromptAnalyzed');
 
     try {
       const savedProxy = localStorage.getItem('ai-vision-proxy-url');
       if (savedProxy) genProxyUrl.value = savedProxy;
       const savedPrompt = localStorage.getItem('ai-vision-prompt');
       if (savedPrompt) genPrompt.value = savedPrompt;
+      const savedAnalyzed = localStorage.getItem('ai-vision-prompt-analyzed');
+      if (savedAnalyzed && genPromptAnalyzed) genPromptAnalyzed.value = savedAnalyzed;
     } catch (_) {}
 
     genProxyUrl?.addEventListener('blur', () => {
@@ -1105,11 +1111,17 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
 
     function updateGenBtn() {
       const hasProxy = (genProxyUrl?.value || '').trim().length > 0;
-      genBtn.disabled = !hasProxy || !genImageDataUrl || !(genPrompt?.value || '').trim();
+      const hasPrompt = ((genPrompt?.value || '').trim() || (genPromptAnalyzed?.value || '').trim());
+      genBtn.disabled = !hasProxy || !genImageDataUrl || !hasPrompt;
       if (genAnalyzeBtn) genAnalyzeBtn.disabled = !genAnalyzeImageDataUrl;
     }
     genProxyUrl?.addEventListener('input', updateGenBtn);
     genPrompt?.addEventListener('input', updateGenBtn);
+    genPromptAnalyzed?.addEventListener('input', updateGenBtn);
+
+    genPromptAnalyzed?.addEventListener('blur', () => {
+      try { localStorage.setItem('ai-vision-prompt-analyzed', genPromptAnalyzed.value || ''); } catch (_) {}
+    });
 
     genVariantsGrid?.addEventListener('click', async (e) => {
       const thumb = e.target.closest('.gen-variant-thumb');
@@ -1173,7 +1185,8 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
 
     genBtn?.addEventListener('click', async () => {
       let base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
-      if (!base || !genImageDataUrl || !(genPrompt?.value || '').trim()) return;
+      const combinedPrompt = [genPrompt?.value?.trim(), genPromptAnalyzed?.value?.trim()].filter(Boolean).join('\n\n').trim();
+      if (!base || !genImageDataUrl || !combinedPrompt) return;
       if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
       const url = base + (base.endsWith('/api/generate') ? '' : '/api/generate');
       genStatus.textContent = 'Генерация...';
@@ -1185,7 +1198,7 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt: genPrompt.value.trim(),
+            prompt: combinedPrompt,
             image: genImageDataUrl,
             model: (document.getElementById('genModel')?.value || 'nano_banana'),
             prompt_strength: parseFloat(document.getElementById('genPromptStrength')?.value) || 0.8,
@@ -1370,7 +1383,8 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
     });
 
     genAnalyzeInsert?.addEventListener('click', () => {
-      if (genAnalyzedPrompt?.value && genPrompt) genPrompt.value = genAnalyzedPrompt.value;
+      const val = genAnalyzedPrompt?.value || '';
+      if (val && genPromptAnalyzed) genPromptAnalyzed.value = val;
     });
 
     function renderVariants(items) {
