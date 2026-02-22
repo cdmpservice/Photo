@@ -3,19 +3,7 @@
 
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 
-const SYSTEM_PROMPT = `You are an expert at describing photos for image-to-image AI prompts. Analyze the image and write a detailed English prompt suitable for img2img generation. MUST include:
-
-1. CAMERA ANGLE / SHOOTING PERSPECTIVE — from which angle the shot is taken (eye level, low angle, high angle, dutch angle, frontal, 3/4 view, etc.)
-2. SHOT SCALE / FRAMING — крупность плана: extreme close-up, close-up, medium close-up, medium shot, medium full shot, full shot, long shot, etc.
-3. MODEL TYPE — тип модели: age range, build, skin tone, hair (color, length, style), facial features, gender if visible
-4. POSE AND BODY POSITION — detailed description of pose, body orientation, hand/arm placement, posture
-5. INTERIOR / ENVIRONMENT — максимально детально: walls, furniture, décor, materials, colors, textures, objects in frame, spatial layout, style (minimalist, modern, vintage, etc.), atmosphere
-6. LIGHTING — direction, quality (soft/hard), source (natural/window/artificial), time of day feel, shadows, highlights
-7. STYLE AND MOOD — overall aesthetic, mood
-
-Output ONLY the prompt text in English, no explanations. Be very detailed, especially for interior and model description. Use 2-5 descriptive sentences.`;
-
-const SYSTEM_PROMPT_STRUCTURED = `You are an advanced visual analysis engine specialized in commercial photography, composition reconstruction, and image-to-image generation optimization.
+const DEFAULT_STRUCTURED_PROMPT = `You are an advanced visual analysis engine specialized in commercial photography, composition reconstruction, and image-to-image generation optimization.
 
 Analyze the provided image and extract a complete structured representation. Output will be used to reconstruct the scene with AI image generation. Return ONLY valid JSON. No markdown. No extra text. Use null when a value cannot be determined.
 
@@ -59,15 +47,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { image: imageDataUrl, system_prompt: customSystemPrompt, structured: useStructured } = req.body || {};
+  const { image: imageDataUrl, system_prompt: customSystemPrompt } = req.body || {};
   if (!imageDataUrl || typeof imageDataUrl !== 'string') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(400).json({ error: 'Need image (data URL)' });
   }
-  const isStructured = useStructured === true || useStructured === 'true' || useStructured === '1';
-  const systemPrompt = isStructured
-    ? SYSTEM_PROMPT_STRUCTURED
-    : ((typeof customSystemPrompt === 'string' && customSystemPrompt.trim()) ? customSystemPrompt.trim() : SYSTEM_PROMPT);
+  const systemPrompt = (typeof customSystemPrompt === 'string' && customSystemPrompt.trim())
+    ? customSystemPrompt.trim()
+    : DEFAULT_STRUCTURED_PROMPT;
 
   const token = process.env.OPENAI_API_KEY;
   if (!token) {
@@ -84,7 +71,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-4o',
-        max_tokens: isStructured ? 2500 : 500,
+        max_tokens: 2500,
         messages: [
           { role: 'system', content: systemPrompt },
           {
@@ -113,7 +100,7 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'No response content' });
     }
 
-    if (isStructured) {
+    {
       let parsed;
       try {
         const cleaned = raw.replace(/^```json\s*/i, '').replace(/\s*```\s*$/i, '').trim();
@@ -125,9 +112,6 @@ export default async function handler(req, res) {
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.status(200).json({ structured: parsed });
     }
-
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    return res.status(200).json({ prompt: raw });
   } catch (err) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(500).json({ error: err.message || 'Analyze error' });

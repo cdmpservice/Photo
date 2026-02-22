@@ -644,9 +644,9 @@
 
     <div id="panel-analyze-settings" class="tab-panel">
       <div class="gen-section">
-        <label>Системный промпт для GPT-анализа</label>
-        <p class="gen-setting-hint" style="margin-bottom: 0.5rem;">Инструкция для GPT: что описывать в фото (ракурс, крупность плана, типаж, интерьер и т.д.). Результат — текстовый промпт на английском.</p>
-        <textarea id="analyzeSystemPrompt" class="gen-prompt-input" rows="14" placeholder="Системный промпт..."></textarea>
+        <label>Системный промпт для GPT-анализа (структурированный JSON)</label>
+        <p class="gen-setting-hint" style="margin-bottom: 0.5rem;">Инструкция и схема JSON для GPT. Результат — структурированный JSON с тегами.</p>
+        <textarea id="analyzeSystemPrompt" class="gen-prompt-input" rows="22" placeholder="Системный промпт..."></textarea>
         <div class="gen-analyze-settings-actions">
           <button type="button" class="btn-secondary" id="analyzePromptReset">Сбросить к умолчанию</button>
           <button type="button" class="btn-secondary" id="analyzePromptSave">Сохранить</button>
@@ -770,10 +770,6 @@
       </div>
       <div class="gen-section gen-analyze-section">
         <label>Промпт из GPT (анализ фото):</label>
-        <label class="gen-check-row" style="margin-bottom: 0.5rem;">
-          <input type="checkbox" id="genAnalyzeStructured">
-          <span>Структурированный анализ (JSON по схеме)</span>
-        </label>
         <button type="button" class="btn-secondary gen-analyze-btn" id="genAnalyzeBtn" disabled>Анализировать через GPT</button>
         <div id="genAnalyzeTagsWrap" class="gen-analyze-tags-wrap" style="display:none;">
           <p class="gen-setting-hint">Выберите блоки для промпта:</p>
@@ -841,17 +837,36 @@
       });
     });
 
-    const DEFAULT_ANALYZE_PROMPT = `You are an expert at describing photos for image-to-image AI prompts. Analyze the image and write a detailed English prompt suitable for img2img generation. MUST include:
+    const DEFAULT_ANALYZE_PROMPT = `You are an advanced visual analysis engine specialized in commercial photography, composition reconstruction, and image-to-image generation optimization.
 
-1. CAMERA ANGLE / SHOOTING PERSPECTIVE — from which angle the shot is taken (eye level, low angle, high angle, dutch angle, frontal, 3/4 view, etc.)
-2. SHOT SCALE / FRAMING — крупность плана: extreme close-up, close-up, medium close-up, medium shot, medium full shot, full shot, long shot, etc.
-3. MODEL TYPE — тип модели: age range, build, skin tone, hair (color, length, style), facial features, gender if visible
-4. POSE AND BODY POSITION — detailed description of pose, body orientation, hand/arm placement, posture
-5. INTERIOR / ENVIRONMENT — максимально детально: walls, furniture, décor, materials, colors, textures, objects in frame, spatial layout, style (minimalist, modern, vintage, etc.), atmosphere
-6. LIGHTING — direction, quality (soft/hard), source (natural/window/artificial), time of day feel, shadows, highlights
-7. STYLE AND MOOD — overall aesthetic, mood
+Analyze the provided image and extract a complete structured representation. Output will be used to reconstruct the scene with AI image generation. Return ONLY valid JSON. No markdown. No extra text. Use null when a value cannot be determined.
 
-Output ONLY the prompt text in English, no explanations. Be very detailed, especially for interior and model description. Use 2-5 descriptive sentences.`;
+CRITICAL RULES:
+- shot_scale: use "full_shot" or "medium_full_shot" when full body + environment visible (NOT "medium" = bust only). Use "medium_shot" only for waist-up, "close_up" for face/chest.
+- primary_subject_position_percent: height_ratio 65-70 (subject height as % of frame), width_ratio 45-55. Do NOT use 80+ for full-body shots.
+- negative_space_ratio: number between 0 and 1 (e.g. 0.20 for 20% negative space), NOT a percentage like 20.
+- aspect_ratio: "portrait_4_5", "portrait_3_4", "square_1_1", "landscape_4_3", etc. Never leave empty.
+- subject_anchor_points: array of strings, e.g. ["center", "lower_center"] or ["right_third", "center"]. Must match rule_of_thirds_usage.
+- camera: always set estimated_focal_length_mm (50, 70, or 85 for fashion/catalog), estimated_lens ("standard" or "telephoto_short"). Add camera_height_cm (e.g. 110-130), camera_pitch_deg (0 to -5), camera_distance_m (e.g. 2.5-3.5).
+- lighting: for studio/clean look use key_light.type "studio_softbox", hardness "soft", direction "front_left" or "front_right", fill_light.presence "soft", ambient_light.level "medium". Use "hard" only when shadows are clearly hard-edged.
+- human_subjects.pose: add pose_micro_constraints array with concrete details: e.g. "seated on edge of sofa", "legs apart feet planted", "hands resting on knees", "torso upright", "head facing camera".
+- generation_blueprint.camera_instruction: explicit string, e.g. "full shot, camera distance ~3m, 50-85mm focal length, camera height ~120cm, no wide angle, no crop changes, match perspective to reference".
+
+Schema:
+{
+  "global_geometry": { "image_width_px": null, "image_height_px": null, "aspect_ratio": "", "horizon_line_position": "", "camera_height_relative_to_subject": "", "camera_height_cm": null, "camera_pitch_deg": null, "camera_distance_m": null, "perspective_strength": "", "vanishing_points": "" },
+  "camera_setup": { "angle": "", "tilt": "", "roll": "", "view_type": "", "estimated_lens": "", "estimated_focal_length_mm": null, "depth_of_field_level": "" },
+  "framing_and_layout": { "shot_scale": "", "rule_of_thirds_usage": "", "golden_ratio_usage": "", "subject_anchor_points": [], "primary_subject_position_percent": { "x_center": null, "y_center": null, "width_ratio": null, "height_ratio": null }, "secondary_subject_positions": [], "negative_space_ratio": null, "visual_weight_distribution": "" },
+  "attention_hierarchy": { "primary_focus_element": "", "secondary_focus_elements": [], "tertiary_elements": [], "eye_flow_path": "" },
+  "subject_analysis": { "main_subject": { "type": "", "category": "", "relative_size_ratio": null, "dominance_level": "" }, "human_subjects": [{ "gender": "", "age_range": "", "body_type": "", "pose": "", "pose_micro_constraints": [], "orientation": "", "expression": "", "clothing_summary": "" }], "product_objects": [{ "category": "", "location_percent": { "x_center": null, "y_center": null }, "size_ratio": null, "orientation": "", "visibility_level": "" }] },
+  "spatial_depth_model": { "foreground_elements": [], "midground_elements": [], "background_elements": [], "layer_separation_strength": "", "depth_cues": [] },
+  "lighting_design": { "key_light": { "type": "", "direction": "", "height": "", "hardness": "" }, "fill_light": { "presence": "", "intensity_ratio": null }, "rim_light": { "presence": "", "direction": "" }, "ambient_light": { "level": "", "color_temperature": "" }, "shadow_structure": "", "highlight_pattern": "" },
+  "color_and_tone": { "dominant_palette": [], "accent_palette": [], "background_palette": [], "saturation_level": "", "contrast_level": "", "color_temperature": "", "color_harmony_model": "" },
+  "texture_and_materials": { "main_surface_textures": [], "fabric_types": [], "reflectivity_levels": "", "roughness_distribution": "" },
+  "environment_model": { "location_type": "", "style_category": "", "architectural_elements": [], "furniture_objects": [], "decorative_elements": [], "scene_density": "", "cleanliness_level": "" },
+  "branding_and_marketing_structure": { "commercial_intent_level": "", "product_visibility_priority": "", "trust_elements": [], "emotional_triggers": [], "call_to_action_visuals": [] },
+  "generation_blueprint": { "camera_instruction": "", "composition_instruction": "", "lighting_instruction": "", "subject_instruction": "", "environment_instruction": "", "style_instruction": "" }
+}`;
 
     const analyzeSystemPromptEl = document.getElementById('analyzeSystemPrompt');
     const analyzePromptResetBtn = document.getElementById('analyzePromptReset');
@@ -1278,7 +1293,6 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
     ];
 
     let lastStructuredData = null;
-    const genAnalyzeStructured = document.getElementById('genAnalyzeStructured');
     const genAnalyzeTagsWrap = document.getElementById('genAnalyzeTagsWrap');
     const genAnalyzeTagsList = document.getElementById('genAnalyzeTagsList');
     const genAnalyzeTagsSelectAll = document.getElementById('genAnalyzeTagsSelectAll');
@@ -1322,7 +1336,6 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
       if (!base) { alert('Укажите URL прокси в поле выше'); genAnalyzeBtn.disabled = false; genAnalyzeBtn.textContent = 'Анализировать через GPT'; return; }
       if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
       const analyzeUrl = base.replace(/\/api\/generate\/?$/, '').replace(/\/api\/?$/, '') + '/api/analyze';
-      const useStructured = genAnalyzeStructured?.checked ?? false;
       genAnalyzeBtn.disabled = true;
       genAnalyzeBtn.textContent = 'Анализ...';
       genAnalyzeResult.style.display = 'none';
@@ -1334,8 +1347,7 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             image: genAnalyzeImageDataUrl,
-            system_prompt: useStructured ? undefined : getAnalyzeSystemPrompt(),
-            structured: useStructured
+            system_prompt: getAnalyzeSystemPrompt()
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -1350,9 +1362,6 @@ Output ONLY the prompt text in English, no explanations. Be very detailed, espec
           lastStructuredData = data.structured;
           genAnalyzeTagsWrap.style.display = 'block';
           renderStructuredTags();
-        } else {
-          genAnalyzedPrompt.value = data.prompt || '';
-          genAnalyzeResult.style.display = 'block';
         }
       } catch (err) {
         alert('Ошибка GPT: ' + (err.message || err));
