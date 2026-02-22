@@ -589,6 +589,11 @@
     .gen-analyze-pick-tags { margin-bottom: 0.75rem; }
     .gen-analyze-tags-pick { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.5rem; min-height: 1.5rem; }
     .gen-analyze-tags-pick label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.9rem; }
+    .analyze-tag-item .tag-desc { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .analyze-prompt-preview { padding: 1rem; background: var(--bg-card); border: 2px solid var(--bg-input); border-radius: 8px; }
+    .analyze-preview-pick { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 0.5rem 0; }
+    .analyze-preview-pick label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.9rem; }
+    .analyze-preview-text { margin: 0.75rem 0 0; padding: 1rem; background: var(--bg-dark); border-radius: 8px; font-size: 0.8rem; overflow-x: auto; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
   </style>
 </head>
 <body>
@@ -668,12 +673,22 @@
         <div id="analyzeTagForm" class="analyze-tag-form" style="display:none; margin-top: 1rem;">
           <label>Название тега:</label>
           <input type="text" id="analyzeTagName" class="gen-proxy-input" placeholder="например: Геометрия, Свет, Схема JSON">
+          <label style="margin-top: 0.5rem;">Описание:</label>
+          <input type="text" id="analyzeTagDesc" class="gen-proxy-input" placeholder="краткое описание (для себя)">
           <label style="margin-top: 0.5rem;">Промпт:</label>
           <textarea id="analyzeTagPrompt" class="gen-prompt-input" rows="8" placeholder="Текст промпта для модели..."></textarea>
           <div class="gen-analyze-settings-actions" style="margin-top: 0.5rem;">
             <button type="button" class="btn-secondary" id="analyzeTagSave">Сохранить</button>
             <button type="button" class="btn-secondary" id="analyzeTagCancel">Отмена</button>
           </div>
+        </div>
+        <div class="gen-analyze-settings-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn-secondary" id="analyzeCheckPrompt">Проверить промпт</button>
+        </div>
+        <div id="analyzePromptPreview" class="analyze-prompt-preview" style="display:none; margin-top: 1rem;">
+          <label>Предпросмотр — что отправится в ИИ:</label>
+          <div class="analyze-preview-pick"></div>
+          <pre id="analyzePromptPreviewText" class="analyze-preview-text"></pre>
         </div>
       </div>
     </div>
@@ -896,7 +911,10 @@
       if (!list) return;
       list.innerHTML = analysisTags.map(t => `
         <div class="analyze-tag-item" data-id="${t.id}">
-          <span class="tag-name">${escapeHtml(t.tag)}</span>
+          <div style="flex:1; min-width:0;">
+            <span class="tag-name">${escapeHtml(t.tag)}</span>
+            ${(t.description || '').trim() ? `<div class="tag-desc">${escapeHtml(t.description)}</div>` : ''}
+          </div>
           <div class="tag-actions">
             <button type="button" class="btn-secondary analyze-tag-edit" data-id="${t.id}">Изменить</button>
             <button type="button" class="btn-secondary analyze-tag-delete" data-id="${t.id}">Удалить</button>
@@ -928,6 +946,7 @@
     function openTagForm(id) {
       const form = document.getElementById('analyzeTagForm');
       const nameEl = document.getElementById('analyzeTagName');
+      const descEl = document.getElementById('analyzeTagDesc');
       const promptEl = document.getElementById('analyzeTagPrompt');
       if (!form || !nameEl || !promptEl) return;
       editingTagId = id || null;
@@ -935,10 +954,12 @@
         const t = analysisTags.find(x => x.id === id);
         if (t) {
           nameEl.value = t.tag;
+          if (descEl) descEl.value = t.description || '';
           promptEl.value = t.prompt;
         }
       } else {
         nameEl.value = '';
+        if (descEl) descEl.value = '';
         promptEl.value = '';
       }
       form.style.display = 'block';
@@ -952,16 +973,18 @@
 
     function saveTag() {
       const nameEl = document.getElementById('analyzeTagName');
+      const descEl = document.getElementById('analyzeTagDesc');
       const promptEl = document.getElementById('analyzeTagPrompt');
       const tag = (nameEl?.value || '').trim();
+      const description = (descEl?.value || '').trim();
       const prompt = (promptEl?.value || '').trim();
       if (!tag) { alert('Введите название тега'); return; }
       if (!prompt) { alert('Введите промпт'); return; }
       if (editingTagId) {
         const t = analysisTags.find(x => x.id === editingTagId);
-        if (t) { t.tag = tag; t.prompt = prompt; }
+        if (t) { t.tag = tag; t.description = description; t.prompt = prompt; }
       } else {
-        analysisTags.push({ id: crypto.randomUUID(), tag, prompt });
+        analysisTags.push({ id: crypto.randomUUID(), tag, description, prompt });
       }
       saveAnalysisTags();
       closeTagForm();
@@ -987,6 +1010,35 @@
     document.getElementById('analyzeTagCreate')?.addEventListener('click', () => openTagForm());
     document.getElementById('analyzeTagSave')?.addEventListener('click', saveTag);
     document.getElementById('analyzeTagCancel')?.addEventListener('click', closeTagForm);
+
+    function renderAnalyzePromptPreview() {
+      const wrap = document.getElementById('analyzePromptPreview');
+      const pickWrap = wrap?.querySelector('.analyze-preview-pick');
+      const textEl = document.getElementById('analyzePromptPreviewText');
+      if (!wrap || !pickWrap || !textEl) return;
+      if (analysisTags.length === 0) {
+        pickWrap.innerHTML = '<span class="gen-setting-hint">Нет тегов. Создайте их выше.</span>';
+        textEl.textContent = '';
+        return;
+      }
+      pickWrap.innerHTML = analysisTags.map(t => `
+        <label><input type="checkbox" class="analyze-preview-cb" data-id="${t.id}"> ${escapeHtml(t.tag)}</label>
+      `).join('');
+      const updatePreview = () => {
+        const checked = Array.from(wrap.querySelectorAll('.analyze-preview-cb:checked')).map(el => el.dataset.id);
+        const parts = checked.map(id => analysisTags.find(t => t.id === id)?.prompt).filter(Boolean);
+        textEl.textContent = parts.join('\n\n') || '(выберите теги выше)';
+      };
+      pickWrap.querySelectorAll('.analyze-preview-cb').forEach(cb => cb.addEventListener('change', updatePreview));
+      updatePreview();
+    }
+
+    document.getElementById('analyzeCheckPrompt')?.addEventListener('click', () => {
+      const preview = document.getElementById('analyzePromptPreview');
+      if (!preview) return;
+      renderAnalyzePromptPreview();
+      preview.style.display = preview.style.display === 'none' ? 'block' : 'block';
+    });
 
     document.querySelectorAll('.tab').forEach(btn => {
       btn.addEventListener('click', () => {
