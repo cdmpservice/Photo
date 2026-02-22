@@ -580,6 +580,15 @@
     .gen-analyze-debug summary { cursor: pointer; color: var(--text-muted); font-size: 0.9rem; }
     .gen-analyze-debug pre { margin: 0.75rem 0; padding: 1rem; background: var(--bg-dark); border-radius: 8px; font-size: 0.75rem; overflow-x: auto; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
     .gen-prompt-sublabel { display: block; color: var(--text-muted); font-size: 0.9rem; margin-top: 1rem; margin-bottom: 0.5rem; }
+    .analyze-tags-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .analyze-tag-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--bg-card); border: 2px solid var(--bg-input); border-radius: 8px; }
+    .analyze-tag-item .tag-name { font-weight: 500; flex: 1; min-width: 0; }
+    .analyze-tag-item .tag-actions { display: flex; gap: 0.5rem; }
+    .analyze-tag-form { padding: 1rem; background: var(--bg-card); border: 2px solid var(--accent); border-radius: 8px; }
+    .analyze-tag-form label { display: block; margin-bottom: 0.25rem; font-size: 0.9rem; }
+    .gen-analyze-pick-tags { margin-bottom: 0.75rem; }
+    .gen-analyze-tags-pick { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.5rem; min-height: 1.5rem; }
+    .gen-analyze-tags-pick label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.9rem; }
   </style>
 </head>
 <body>
@@ -650,12 +659,21 @@
 
     <div id="panel-analyze-settings" class="tab-panel">
       <div class="gen-section">
-        <label>Системный промпт для GPT-анализа (структурированный JSON)</label>
-        <p class="gen-setting-hint" style="margin-bottom: 0.5rem;">Инструкция и схема JSON для GPT. Результат — структурированный JSON с тегами.</p>
-        <textarea id="analyzeSystemPrompt" class="gen-prompt-input" rows="22" placeholder="Системный промпт..."></textarea>
-        <div class="gen-analyze-settings-actions">
-          <button type="button" class="btn-secondary" id="analyzePromptReset">Сбросить к умолчанию</button>
-          <button type="button" class="btn-secondary" id="analyzePromptSave">Сохранить</button>
+        <label>Конструктор промптов для анализа</label>
+        <p class="gen-setting-hint" style="margin-bottom: 0.75rem;">Создайте теги с промптами. На странице «Генерация» выберите теги — в модель отправится объединённый промпт.</p>
+        <div id="analyzeTagsList" class="analyze-tags-list"></div>
+        <div class="gen-analyze-settings-actions" style="margin-top: 1rem;">
+          <button type="button" class="btn-secondary" id="analyzeTagCreate">+ Создать</button>
+        </div>
+        <div id="analyzeTagForm" class="analyze-tag-form" style="display:none; margin-top: 1rem;">
+          <label>Название тега:</label>
+          <input type="text" id="analyzeTagName" class="gen-proxy-input" placeholder="например: Геометрия, Свет, Схема JSON">
+          <label style="margin-top: 0.5rem;">Промпт:</label>
+          <textarea id="analyzeTagPrompt" class="gen-prompt-input" rows="8" placeholder="Текст промпта для модели..."></textarea>
+          <div class="gen-analyze-settings-actions" style="margin-top: 0.5rem;">
+            <button type="button" class="btn-secondary" id="analyzeTagSave">Сохранить</button>
+            <button type="button" class="btn-secondary" id="analyzeTagCancel">Отмена</button>
+          </div>
         </div>
       </div>
     </div>
@@ -784,6 +802,10 @@
             <option value="gemini">Gemini 3.1 Pro Preview (Google)</option>
           </select>
         </div>
+        <div class="gen-analyze-pick-tags">
+          <label>Выберите промпты:</label>
+          <div id="genAnalyzeTagsPick" class="gen-analyze-tags-pick"></div>
+        </div>
         <button type="button" class="btn-secondary gen-analyze-btn" id="genAnalyzeBtn" disabled>Анализировать</button>
         <div class="gen-analyze-result" id="genAnalyzeResult" style="display:none;">
           <textarea id="genAnalyzedRaw" class="gen-prompt-input" readonly rows="12" placeholder="Сырой JSON от GPT появится после анализа" style="font-family:monospace; font-size:0.85rem;"></textarea>
@@ -847,69 +869,133 @@
       });
     });
 
-    const DEFAULT_ANALYZE_PROMPT = `You are an advanced visual analysis engine specialized in commercial photography, composition reconstruction, and image-to-image generation optimization.
+    const ANALYSIS_TAGS_KEY = 'ai-vision-analysis-tags';
+    let analysisTags = [];
+    let editingTagId = null;
 
-Analyze the provided image and extract a complete structured representation. Output will be used to reconstruct the scene with AI image generation. Return ONLY valid JSON. No markdown. No extra text. Use null when a value cannot be determined.
-
-CRITICAL RULES:
-- framing_and_layout.shot_scale: use "full_shot" or "medium_full_shot" when full body + environment visible (NOT "medium" = bust only). Use "medium_shot" only for waist-up, "close_up" for face/chest.
-- framing_and_layout.primary_subject_position_percent: height_ratio 65-70 (subject height as % of frame), width_ratio 45-55. Do NOT use 80+ for full-body shots.
-- framing_and_layout.negative_space_ratio: number between 0 and 1 (e.g. 0.20 for 20% negative space), NOT a percentage like 20.
-- global_geometry.aspect_ratio: "portrait_4_5", "portrait_3_4", "square_1_1", "landscape_4_3", etc. Never leave empty.
-- framing_and_layout.subject_anchor_points: array of strings, e.g. ["center", "lower_center"]. Must match rule_of_thirds_usage.
-- camera_setup.focal_length_mm (50, 70, or 85), estimated_lens ("standard" or "telephoto_short"). global_geometry.camera_height_cm (e.g. 110-130), camera_to_subject_pitch_deg (0 to -5), camera_distance_m (e.g. 2.5-3.5).
-- lighting_design: for studio use key_light.type "studio_softbox", hardness "soft", direction "front_left" or "front_right", fill_light.presence "soft", ambient_light.level "medium". Use "hard" only when shadows are clearly hard-edged.
-- human_subjects.body_pose: use pose_microtags array with concrete details: e.g. "seated on edge of sofa", "legs apart feet planted", "hands resting on knees", "torso upright", "head facing camera".
-- generation_blueprint.camera_instruction: explicit string, e.g. "full shot, camera distance ~3m, 50-85mm focal length, camera height ~120cm, no wide angle, no crop changes, match perspective to reference".
-
-Schema (strict structure, follow exactly):
-{
-  "global_geometry": { "image_width_px": null, "image_height_px": null, "aspect_ratio": "", "aspect_ratio_numeric": null, "horizon_line_position_ratio": null, "vertical_centerline_alignment": "", "camera_height_relative_to_subject": "", "camera_height_relative_to_body_part": "", "camera_height_cm": null, "camera_distance_m": null, "camera_to_subject_distance_m": null, "camera_to_floor_pitch_deg": null, "camera_to_subject_pitch_deg": null, "perspective_strength": "", "field_of_view_deg": null, "vertical_convergence": { "presence": "", "direction": "", "strength": "" }, "keystone_distortion": { "presence": "", "strength": "" }, "vanishing_points": { "count": null, "type": "", "points_norm_xy": [] } },
-  "camera_setup": { "angle": "", "view_type": "", "camera_position_relative": { "azimuth_deg": null, "elevation_deg": null, "radius_m": null, "lateral_offset": "", "lateral_offset_ratio": null }, "camera_orientation": { "yaw_deg": null, "pitch_deg": null, "roll_deg": null }, "estimated_lens": "", "focal_length_mm": null, "focal_length_35mm_equiv_mm": null, "aperture_equivalent": "", "focus_distance_m": null, "depth_of_field_level": "", "bokeh_character": "", "sensor_look": "", "exposure_character": { "iso_hint": null, "shutter_hint_s": null, "wb_kelvin_hint": null } },
-  "framing_and_layout": { "shot_scale": "", "camera_to_subject_framing_axis": "", "vertical_subject_bias": "", "subject_scale_lock": false, "crop_margins_ratio": { "top": null, "bottom": null, "left": null, "right": null }, "headroom_ratio": null, "footroom_ratio": null, "rule_of_thirds_usage": "", "golden_ratio_usage": "", "leading_lines_usage": "", "subject_anchor_points": [], "primary_subject_bbox_percent": { "x_min": null, "y_min": null, "x_max": null, "y_max": null }, "primary_subject_position_percent": { "x_center": null, "y_center": null, "width_ratio": null, "height_ratio": null }, "secondary_subject_positions": [], "negative_space_ratio": null, "visual_weight_distribution": "", "background_visibility_ratio": null, "floor_visibility_ratio": null, "wall_visibility_ratio": null },
-  "attention_hierarchy": { "primary_focus_element": "", "secondary_focus_elements": [], "tertiary_elements": [], "eye_flow_path": "", "focus_falloff_direction": "", "sharpness_priority_map": [] },
-  "subject_analysis": { "main_subject": { "type": "", "category": "", "relative_size_ratio": null, "dominance_level": "" }, "human_subjects": [{ "gender": "", "age_range": "", "body_type": "", "skin_tone": "", "hair": { "color": "", "length": "", "style": "" }, "face_visibility": "", "expression": "", "gaze_direction": "", "body_pose": { "pose": "", "pose_microtags": [], "posture": "", "weight_distribution": "", "body_yaw_deg": null, "shoulder_yaw_deg": null, "hip_yaw_deg": null, "torso_pitch_deg": null, "head_turn_deg": null, "arm_positions": "", "hand_positions": "", "leg_positions": "" }, "clothing_and_accessories": { "clothing_summary": "", "materials": [], "accessories": [], "footwear": "" } }], "product_objects": [{ "category": "", "subcategory": "", "identity_hint": "", "location_percent": { "x_center": null, "y_center": null }, "bbox_percent": { "x_min": null, "y_min": null, "x_max": null, "y_max": null }, "mask_area_ratio": null, "size_ratio": null, "orientation": "", "pose_relation_to_human": "", "visibility_level": "", "occlusion": { "is_occluded": null, "occlusion_sources": [], "occlusion_ratio": null } }] },
-  "spatial_depth_model": { "foreground_elements": [], "midground_elements": [], "background_elements": [], "subject_to_background_distance_m": null, "camera_to_subject_distance_m": null, "camera_height_to_floor_cm": null, "floor_plane": { "visible": null, "tilt_deg": null, "material_hint": "" }, "wall_planes": [{ "type": "", "orientation_hint": "", "tilt_deg": null, "distance_hint_m": null }], "layer_separation_strength": "", "depth_cues": [], "depth_compression_level": "", "relative_scale_cues": { "presence": "", "notes": "" } },
-  "lighting_design": { "key_light": { "type": "", "source": "", "direction": "", "height": "", "azimuth_deg": null, "elevation_deg": null, "hardness": "", "distance_hint_m": null, "size_hint": "", "wrap_level": "" }, "fill_light": { "presence": "", "source": "", "intensity_ratio": null, "direction": "" }, "rim_light": { "presence": "", "source": "", "direction": "", "intensity_hint": "" }, "bounce_light": { "presence": "", "bounce_surface_hint": "", "direction": "" }, "ambient_light": { "level": "", "color_temperature": "", "environment_hint": "" }, "shadow_structure": "", "shadow_direction": "", "shadow_length_ratio": null, "shadow_edge_softness": "", "highlight_pattern": "", "specular_behavior": "" },
-  "color_and_tone": { "dominant_palette": [], "accent_palette": [], "background_palette": [], "saturation_level": "", "contrast_level": "", "color_temperature": "", "white_balance_bias": "", "tone_curve_hint": "", "color_harmony_model": "", "skin_tone_rendering": "", "black_levels": "" },
-  "texture_and_materials": { "main_surface_textures": [], "fabric_types": [], "reflectivity_levels": "", "roughness_distribution": "", "material_notes": { "leather_specularity": "", "knit_detail_level": "", "sofa_fabric_detail_level": "" } },
-  "environment_model": { "location_type": "", "style_category": "", "architectural_elements": [], "furniture_objects": [{ "category": "", "material": "", "color": "", "position_relative_to_subject": "", "orientation_hint": "" }], "decorative_elements": [], "subject_position_relative_to_furniture": "", "scene_density": "", "cleanliness_level": "", "background_geometry_constraints": { "paneling_molding_style": "", "wall_pattern_scale": "", "visible_edges_alignment": "" } },
-  "branding_and_marketing_structure": { "commercial_intent_level": "", "product_visibility_priority": "", "trust_elements": [], "emotional_triggers": [], "call_to_action_visuals": [], "retouching_level": "", "catalog_style_conformance": "" },
-  "generation_blueprint": { "camera_instruction": "", "camera_pose_constraints": { "keep_eye_level": null, "match_pitch_deg": null, "match_focal_length_mm": null, "avoid_wide_angle_distortion": null, "match_camera_height_relative_to_body_part": "", "match_lateral_offset": "" }, "composition_instruction": "", "composition_constraints": { "lock_subject_bbox_percent": { "x_min": null, "y_min": null, "x_max": null, "y_max": null }, "lock_headroom_ratio": null, "lock_floor_visibility_ratio": null, "lock_vertical_subject_bias": "" }, "lighting_instruction": "", "lighting_constraints": { "match_key_light_direction": "", "match_shadow_direction": "", "match_shadow_softness": "", "match_specular_behavior": "" }, "subject_instruction": "", "environment_instruction": "", "style_instruction": "", "camera_lock_instruction": "", "do_not_change": [] }
-}`;
-
-    const analyzeSystemPromptEl = document.getElementById('analyzeSystemPrompt');
-    const analyzePromptResetBtn = document.getElementById('analyzePromptReset');
-    const analyzePromptSaveBtn = document.getElementById('analyzePromptSave');
-
-    try {
-      const saved = localStorage.getItem('ai-vision-analyze-prompt');
-      if (saved) analyzeSystemPromptEl.value = saved;
-      else analyzeSystemPromptEl.value = DEFAULT_ANALYZE_PROMPT;
-    } catch (_) {
-      analyzeSystemPromptEl.value = DEFAULT_ANALYZE_PROMPT;
+    function loadAnalysisTags() {
+      try {
+        const s = localStorage.getItem(ANALYSIS_TAGS_KEY);
+        analysisTags = s ? JSON.parse(s) : [];
+        if (!Array.isArray(analysisTags)) analysisTags = [];
+      } catch (_) {
+        analysisTags = [];
+      }
     }
 
-    analyzePromptResetBtn?.addEventListener('click', () => {
-      analyzeSystemPromptEl.value = DEFAULT_ANALYZE_PROMPT;
-    });
-
-    analyzePromptSaveBtn?.addEventListener('click', () => {
+    function saveAnalysisTags() {
       try {
-        localStorage.setItem('ai-vision-analyze-prompt', analyzeSystemPromptEl.value || '');
+        localStorage.setItem(ANALYSIS_TAGS_KEY, JSON.stringify(analysisTags));
       } catch (_) {}
-    });
-
-    analyzeSystemPromptEl?.addEventListener('blur', () => {
-      try {
-        localStorage.setItem('ai-vision-analyze-prompt', analyzeSystemPromptEl.value || '');
-      } catch (_) {}
-    });
-
-    function getAnalyzeSystemPrompt() {
-      const v = (analyzeSystemPromptEl?.value || '').trim();
-      return v || DEFAULT_ANALYZE_PROMPT;
+      renderAnalysisTagsList();
+      renderGenAnalyzeTagsPick();
     }
+
+    function renderAnalysisTagsList() {
+      const list = document.getElementById('analyzeTagsList');
+      if (!list) return;
+      list.innerHTML = analysisTags.map(t => `
+        <div class="analyze-tag-item" data-id="${t.id}">
+          <span class="tag-name">${escapeHtml(t.tag)}</span>
+          <div class="tag-actions">
+            <button type="button" class="btn-secondary analyze-tag-edit" data-id="${t.id}">Изменить</button>
+            <button type="button" class="btn-secondary analyze-tag-delete" data-id="${t.id}">Удалить</button>
+          </div>
+        </div>
+      `).join('');
+      list.querySelectorAll('.analyze-tag-edit').forEach(btn => btn.addEventListener('click', () => openTagForm(btn.dataset.id)));
+      list.querySelectorAll('.analyze-tag-delete').forEach(btn => btn.addEventListener('click', () => deleteTag(btn.dataset.id)));
+    }
+
+    function renderGenAnalyzeTagsPick() {
+      const wrap = document.getElementById('genAnalyzeTagsPick');
+      if (!wrap) return;
+      if (analysisTags.length === 0) {
+        wrap.innerHTML = '<span class="gen-setting-hint">Нет тегов. Создайте их во вкладке «Настройки анализа».</span>';
+        return;
+      }
+      wrap.innerHTML = analysisTags.map(t => `
+        <label><input type="checkbox" class="gen-analyze-tag-cb" data-id="${t.id}"> ${escapeHtml(t.tag)}</label>
+      `).join('');
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function openTagForm(id) {
+      const form = document.getElementById('analyzeTagForm');
+      const nameEl = document.getElementById('analyzeTagName');
+      const promptEl = document.getElementById('analyzeTagPrompt');
+      if (!form || !nameEl || !promptEl) return;
+      editingTagId = id || null;
+      if (id) {
+        const t = analysisTags.find(x => x.id === id);
+        if (t) {
+          nameEl.value = t.tag;
+          promptEl.value = t.prompt;
+        }
+      } else {
+        nameEl.value = '';
+        promptEl.value = '';
+      }
+      form.style.display = 'block';
+    }
+
+    function closeTagForm() {
+      const form = document.getElementById('analyzeTagForm');
+      if (form) form.style.display = 'none';
+      editingTagId = null;
+    }
+
+    function saveTag() {
+      const nameEl = document.getElementById('analyzeTagName');
+      const promptEl = document.getElementById('analyzeTagPrompt');
+      const tag = (nameEl?.value || '').trim();
+      const prompt = (promptEl?.value || '').trim();
+      if (!tag) { alert('Введите название тега'); return; }
+      if (!prompt) { alert('Введите промпт'); return; }
+      if (editingTagId) {
+        const t = analysisTags.find(x => x.id === editingTagId);
+        if (t) { t.tag = tag; t.prompt = prompt; }
+      } else {
+        analysisTags.push({ id: crypto.randomUUID(), tag, prompt });
+      }
+      saveAnalysisTags();
+      closeTagForm();
+    }
+
+    function deleteTag(id) {
+      if (!confirm('Удалить этот тег?')) return;
+      analysisTags = analysisTags.filter(t => t.id !== id);
+      saveAnalysisTags();
+      closeTagForm();
+    }
+
+    function getCombinedPromptFromSelectedTags() {
+      const checked = Array.from(document.querySelectorAll('.gen-analyze-tag-cb:checked')).map(el => el.dataset.id);
+      const parts = checked.map(id => analysisTags.find(t => t.id === id)?.prompt).filter(Boolean);
+      return parts.join('\n\n');
+    }
+
+    loadAnalysisTags();
+    renderAnalysisTagsList();
+    renderGenAnalyzeTagsPick();
+
+    document.getElementById('analyzeTagCreate')?.addEventListener('click', () => openTagForm());
+    document.getElementById('analyzeTagSave')?.addEventListener('click', saveTag);
+    document.getElementById('analyzeTagCancel')?.addEventListener('click', closeTagForm);
+
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.tab === 'generate' || btn.dataset.tab === 'analyze-settings') {
+          renderGenAnalyzeTagsPick();
+          if (btn.dataset.tab === 'analyze-settings') renderAnalysisTagsList();
+        }
+      });
+    });
 
     // Variants tab
     const variantsUpload = document.getElementById('variantsUpload');
@@ -1329,6 +1415,8 @@ Schema (strict structure, follow exactly):
       let base = (genProxyUrl?.value || '').trim().replace(/\/+$/, '');
       const genAnalyzeProvider = document.getElementById('genAnalyzeProvider');
       const provider = (genAnalyzeProvider?.value === 'gemini') ? 'gemini' : 'openai';
+      const combinedPrompt = getCombinedPromptFromSelectedTags();
+      if (!combinedPrompt) { alert('Выберите хотя бы один промпт в «Выберите промпты»'); genAnalyzeBtn.disabled = false; return; }
       if (!base) { alert('Укажите URL прокси в поле выше'); genAnalyzeBtn.disabled = false; return; }
       if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
       const analyzeUrl = base.replace(/\/api\/generate\/?$/, '').replace(/\/api\/?$/, '') + '/api/analyze';
@@ -1344,7 +1432,7 @@ Schema (strict structure, follow exactly):
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             image: genAnalyzeImageDataUrl,
-            system_prompt: getAnalyzeSystemPrompt(),
+            system_prompt: combinedPrompt,
             provider
           }),
         });
